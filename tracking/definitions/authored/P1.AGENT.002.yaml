@@ -1,0 +1,21 @@
+id: P1.AGENT.002
+title: AccessPolicy, PolicyGuard, ConfirmationHandler, dry-run PlannedAction
+type: build
+phase: P1
+workstream: AGENT
+design_refs:
+- §16.4
+research_refs: []
+depends_on:
+- P0.CORE.015
+deliverables:
+- atlassian_client/policy.py
+acceptance:
+- Access classes, credits, cloudId, project/space scope (JQL/CQL rewriting), limit clamping
+- Writes build PlannedAction
+checks:
+- pytest tests/agent/test_p1_agent_002.py -q
+size: M
+human_only: false
+needs: none
+source: authored

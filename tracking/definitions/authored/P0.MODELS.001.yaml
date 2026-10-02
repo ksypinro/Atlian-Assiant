@@ -1,0 +1,21 @@
+id: P0.MODELS.001
+title: 'Domain models: common, jira, jsm, confluence, graph, admin, identity, webhooks'
+type: build
+phase: P0
+workstream: MODELS
+design_refs:
+- §8
+research_refs: []
+depends_on:
+- P0.CORE.012
+deliverables:
+- atlassian_client/models/
+acceptance:
+- Page/SourceRef/UserRef/Tombstone/BodyInput + every model listed in section 8
+- to_agent_text() truncation marker
+checks:
+- pytest tests/models/test_p0_models_001.py -q
+size: M
+human_only: false
+needs: none
+source: authored

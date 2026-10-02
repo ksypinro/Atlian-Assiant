@@ -1,0 +1,21 @@
+id: P0.CORE.010
+title: Pagination strategies + opaque Cursor codec (all 9 strategies)
+type: build
+phase: P0
+workstream: CORE
+design_refs:
+- §7.4
+research_refs: []
+depends_on:
+- P0.CORE.007
+deliverables:
+- atlassian_client/core/pagination.py
+acceptance:
+- Offset, NextPageToken, JSM, LinkCursor, CQL, OrgEventsCursor, Cli, Mcp, DcOffset
+- 'Property-based tests: no gaps, no duplicates, cursor round-trip'
+checks:
+- pytest tests/core/test_p0_core_010.py -q
+size: M
+human_only: false
+needs: none
+source: authored

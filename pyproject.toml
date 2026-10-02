@@ -1,0 +1,12 @@
+[project]
+name = "atlassian-client-tracking"
+version = "0.0.0"
+description = "Implementation tracker for the AtlassianClient build"
+requires-python = ">=3.11"
+
+[dependency-groups]
+tracking = ["pydantic>=2.7", "pyyaml>=6.0", "jsonschema>=4.21", "pytest>=8.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

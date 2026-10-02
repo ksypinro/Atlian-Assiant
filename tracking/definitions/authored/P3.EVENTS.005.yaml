@@ -1,0 +1,21 @@
+id: P3.EVENTS.005
+title: WebhookEndpoint, verifiers, response semantics, WebhookUrlPreflight, ASGI/FastAPI/Flask adapters
+type: build
+phase: P3
+workstream: EVENTS
+design_refs:
+- §14.5
+research_refs: []
+depends_on:
+- P3.EVENTS.003
+deliverables:
+- atlassian_client/events/receivers/
+acceptance:
+- Status codes per the section 14.5 table
+- Preflight rejects private IPs, bad ports, bad TLS, redirects
+checks:
+- pytest tests/events/test_p3_events_005.py -q
+size: M
+human_only: false
+needs: none
+source: authored

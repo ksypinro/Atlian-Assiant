@@ -1,0 +1,20 @@
+id: P2.CORE.001
+title: No-duplicate-write guarantees across router fallback
+type: build
+phase: P2
+workstream: CORE
+design_refs:
+- §12.4
+research_refs: []
+depends_on:
+- P0.CORE.015
+deliverables:
+- tests/routing/test_no_duplicate_writes.py
+acceptance:
+- After a non-idempotent request was sent any error propagates
+checks:
+- pytest tests/routing/test_no_duplicate_writes.py -q
+size: S
+human_only: false
+needs: none
+source: authored

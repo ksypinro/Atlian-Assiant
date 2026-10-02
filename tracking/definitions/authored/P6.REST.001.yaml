@@ -1,0 +1,22 @@
+id: P6.REST.001
+title: 'tools/codegen.py: OpenAPI -> generated REST tier + operations_index.json'
+type: build
+phase: P6
+workstream: REST
+design_refs:
+- §10.1
+research_refs: []
+depends_on:
+- P0.CORE.007
+deliverables:
+- tools/codegen.py
+- atlassian_client/backends/rest_cloud/generated/
+acceptance:
+- Every operationId of Jira v3, Agile, JSM, Confluence v2/v1 reachable
+- Nightly drift job opens a PR
+checks:
+- pytest tests/rest/test_p6_rest_001.py -q
+size: M
+human_only: false
+needs: none
+source: authored

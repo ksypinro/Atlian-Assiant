@@ -1,0 +1,20 @@
+id: P5.BROWSER.001
+title: Playwright session, versioned selectors.yaml, native exports, evidence screenshots
+type: build
+phase: P5
+workstream: BROWSER
+design_refs:
+- §10.8
+research_refs: []
+depends_on:
+- BE.browser
+deliverables:
+- atlassian_client/backends/browser/
+acceptance:
+- Persistent profile (human does SSO); read-only by default; writes need opt-in + confirmation
+checks:
+- pytest tests/browser/test_p5_browser_001.py -q
+size: M
+human_only: false
+needs: none
+source: authored

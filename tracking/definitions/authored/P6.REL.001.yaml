@@ -1,0 +1,20 @@
+id: P6.REL.001
+title: 'Packaging: extras, entry points, SemVer rules, py.typed, .pyi stubs'
+type: build
+phase: P6
+workstream: REL
+design_refs:
+- §19
+research_refs: []
+depends_on:
+- P0.CORE.001
+deliverables:
+- pyproject.toml
+acceptance:
+- Install matrix for each extra imports cleanly
+checks:
+- pytest tests/rel/test_p6_rel_001.py -q
+size: S
+human_only: false
+needs: none
+source: authored

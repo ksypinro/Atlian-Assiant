@@ -1,0 +1,20 @@
+id: P0.CORE.017
+title: SyncProxy + generated .pyi stubs (AtlassianClient)
+type: build
+phase: P0
+workstream: CORE
+design_refs:
+- §7.9
+research_refs: []
+depends_on:
+- P0.CORE.016
+deliverables:
+- atlassian_client/facade/sync.py
+acceptance:
+- Coroutines become blocking; async iterators become iterators; docstrings preserved
+checks:
+- pytest tests/core/test_p0_core_017.py -q
+size: M
+human_only: false
+needs: none
+source: authored

@@ -1,0 +1,23 @@
+id: P1.AGENT.003
+title: for_agent() preset wiring and AGENT_GUIDE / llms.txt content
+type: build
+phase: P1
+workstream: AGENT
+design_refs:
+- §16.1
+- §16.5
+research_refs: []
+depends_on:
+- P1.AGENT.001
+- P1.AGENT.002
+deliverables:
+- atlassian_client/agent/docs/
+acceptance:
+- AtlassianClient.for_agent() read-only MCP-first
+- Guide outline of section 16.5
+checks:
+- pytest tests/agent/test_p1_agent_003.py -q
+size: M
+human_only: false
+needs: none
+source: authored

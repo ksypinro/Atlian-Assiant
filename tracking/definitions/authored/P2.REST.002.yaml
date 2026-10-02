@@ -1,0 +1,21 @@
+id: P2.REST.002
+title: Attachment upload/download streaming with max_bytes and text extraction
+type: build
+phase: P2
+workstream: REST
+design_refs:
+- §10.1
+- §9.2
+research_refs: []
+depends_on:
+- BE.rest
+deliverables:
+- atlassian_client/backends/rest_cloud/
+acceptance:
+- Lazy download from metadata; size caps enforced
+checks:
+- pytest tests/rest/test_p2_rest_002.py -q
+size: S
+human_only: false
+needs: none
+source: authored

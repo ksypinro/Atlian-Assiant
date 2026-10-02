@@ -1,0 +1,21 @@
+id: P1.AGENT.001
+title: '@agent_tool, ToolSpec, ToolRegistry, ToolResult, exporters (anthropic/openai/json_schema/mcp)'
+type: build
+phase: P1
+workstream: AGENT
+design_refs:
+- §16.2
+research_refs: []
+depends_on:
+- P0.CORE.016
+deliverables:
+- atlassian_client/agent/
+acceptance:
+- Schemas from signatures; descriptions assembled from metadata
+- Errors become ToolResult(ok=False) with hint
+checks:
+- pytest tests/agent/test_p1_agent_001.py -q
+size: M
+human_only: false
+needs: none
+source: authored

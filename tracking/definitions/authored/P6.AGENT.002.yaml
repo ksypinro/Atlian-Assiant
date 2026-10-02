@@ -1,0 +1,23 @@
+id: P6.AGENT.002
+title: MCP server mode (`atlassian-client mcp serve`) and the atlassian-client CLI
+type: build
+phase: P6
+workstream: AGENT
+design_refs:
+- §16.7
+- §16.8
+research_refs: []
+depends_on:
+- P1.AGENT.001
+deliverables:
+- atlassian_client/agent/mcp_server.py
+- atlassian_client/cli.py
+acceptance:
+- Every curated tool served over stdio/http
+- CLI commands of section 16.8
+checks:
+- pytest tests/agent/test_p6_agent_002.py -q
+size: M
+human_only: false
+needs: none
+source: authored

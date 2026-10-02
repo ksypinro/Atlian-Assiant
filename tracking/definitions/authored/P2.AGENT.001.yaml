@@ -1,0 +1,20 @@
+id: P2.AGENT.001
+title: 'Confirmation handlers: Cli, Callback, AutoApprove (refused for agent preset), DenyAll'
+type: build
+phase: P2
+workstream: AGENT
+design_refs:
+- §16.4
+research_refs: []
+depends_on:
+- P1.AGENT.002
+deliverables:
+- atlassian_client/policy.py
+acceptance:
+- AutoApprove cannot be used with preset=agent
+checks:
+- pytest tests/agent/test_p2_agent_001.py -q
+size: S
+human_only: false
+needs: none
+source: authored

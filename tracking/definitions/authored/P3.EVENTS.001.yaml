@@ -1,0 +1,23 @@
+id: P3.EVENTS.001
+title: events/catalog.py (DM-01..49, CC-01..15) + vendored research + coverage test
+type: build
+phase: P3
+workstream: EVENTS
+design_refs:
+- §14.19
+research_refs: []
+depends_on:
+- P0.CORE.002
+deliverables:
+- atlassian_client/events/catalog.py
+- docs/research/
+- tests/events/test_research_coverage.py
+acceptance:
+- Ledger complete and unique; every research section mapped; every component importable; one contract
+  test per method
+checks:
+- pytest tests/events/test_research_coverage.py -q
+size: M
+human_only: false
+needs: none
+source: authored

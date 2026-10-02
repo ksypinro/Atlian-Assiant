@@ -1,0 +1,24 @@
+id: P3.EVENTS.002
+title: EventProvisioner base, ProvisionMode, plans, EndToEndProbe, EventPlaneConfig
+type: build
+phase: P3
+workstream: EVENTS
+design_refs:
+- §14.3
+research_refs: []
+depends_on:
+- P3.EVENTS.001
+- P1.AGENT.002
+deliverables:
+- atlassian_client/events/provision/base.py
+- atlassian_client/events/config.py
+- atlassian_client/events/verify.py
+acceptance:
+- plan/apply/verify/teardown contract
+- Probes mutate only configured sandbox targets and need WRITE + confirmation
+checks:
+- pytest tests/events/test_p3_events_002.py -q
+size: M
+human_only: false
+needs: none
+source: authored

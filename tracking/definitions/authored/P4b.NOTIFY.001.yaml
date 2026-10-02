@@ -1,0 +1,21 @@
+id: P4b.NOTIFY.001
+title: AtlassianLinkParser for email/Slack/Teams/SMS/RSS; digest splitting
+type: build
+phase: P4b
+workstream: NOTIFY
+design_refs:
+- §14.4
+- §14.10
+research_refs: []
+depends_on:
+- P3.EVENTS.003
+deliverables:
+- atlassian_client/events/human/
+acceptance:
+- Issue keys, browse URLs, Confluence ids, JSM keys extracted; unresolved messages still emitted as UNKNOWN
+checks:
+- pytest tests/notify/test_p4b_notify_001.py -q
+size: M
+human_only: false
+needs: none
+source: authored

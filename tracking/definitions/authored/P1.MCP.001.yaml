@@ -1,0 +1,22 @@
+id: P1.MCP.001
+title: MCP session lifecycle, live tool list, tool map, McpResultMapper
+type: build
+phase: P1
+workstream: MCP
+design_refs:
+- §10.3
+research_refs: []
+depends_on:
+- BE.mcp
+deliverables:
+- atlassian_client/backends/mcp/
+acceptance:
+- Connect, bind cloudId, build supported_operations from tools/list
+- Primary vs deferred (discover/execute*) routing
+- Full tool map of section 10.3
+checks:
+- pytest tests/mcp/test_p1_mcp_001.py -q
+size: M
+human_only: false
+needs: none
+source: authored

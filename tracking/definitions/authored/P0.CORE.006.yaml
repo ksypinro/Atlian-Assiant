@@ -1,0 +1,23 @@
+id: P0.CORE.006
+title: ApiSurface, UrlResolver, CloudIdResolver (+ cloudId pinning)
+type: build
+phase: P0
+workstream: CORE
+design_refs:
+- §7.1
+research_refs: []
+depends_on:
+- P0.CORE.002
+- P0.CORE.004
+deliverables:
+- atlassian_client/core/urls.py
+acceptance:
+- URL forms for basic vs gateway auth for every surface
+- cloudId resolution order and per-site cache
+- pin_cloud_id enforced client-side
+checks:
+- pytest tests/core/test_p0_core_006.py -q
+size: M
+human_only: false
+needs: none
+source: authored

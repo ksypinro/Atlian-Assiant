@@ -1,0 +1,214 @@
+# Hand-maintained hints that `track seed` combines with the tables parsed from the design document.
+# Anything the design states explicitly (DM ledger phases, roadmap) is NOT repeated here.
+
+# Backend → (phase for read/search ops, phase for write/delete/manage ops)
+backend_phases:
+  rest:     [P0, P2]
+  mcp:      [P1, P2]
+  rest_dc:  [P5, P5]
+  graphql:  [P5, P5]
+  acli:     [P5, P5]
+  twg:      [P5, P5]
+  jira_cli: [P5, P5]
+  browser:  [P5, P5]
+  data_lake: [P5, P5]
+
+# Design §11 column header -> backend kind
+matrix_columns:
+  REST: rest
+  DC: rest_dc
+  MCP: mcp
+  GQL: graphql
+  ACLI: acli
+  TWG: twg
+  jira-cli: jira_cli
+  Browser: browser
+  Lake: data_lake
+
+# Row label -> access class + optional per-backend phase override (rest/mcp only matter; others stay P5)
+matrix_rows:
+  "Jira: get issue": {slug: jira-issue-get, access: read}
+  "Jira: search JQL": {slug: jira-issue-search, access: search}
+  "Jira: comments list": {slug: jira-comments-list, access: read}
+  "Jira: changelog": {slug: jira-changelog, access: read}
+  "Jira: worklogs": {slug: jira-worklogs, access: read}
+  "Jira: transitions list": {slug: jira-transitions-list, access: read}
+  "Jira: download attachment": {slug: jira-attachment-download, access: read}
+  "Jira: create / edit issue": {slug: jira-issue-create-edit, access: write}
+  "Jira: bulk create": {slug: jira-bulk-create, access: write}
+  "Jira: transition": {slug: jira-transition, access: write}
+  "Jira: add comment / worklog": {slug: jira-comment-worklog-add, access: write}
+  "Jira: link / remote link": {slug: jira-links-write, access: write}
+  "Jira: upload attachment": {slug: jira-attachment-upload, access: write}
+  "Jira: delete issue/comment/attachment": {slug: jira-delete, access: delete}
+  "Jira: projects / components / versions": {slug: jira-projects, access: read}
+  "Jira: fields / create-metadata": {slug: jira-fields-meta, access: read}
+  "Jira: users / account lookup": {slug: jira-users, access: read}
+  "Jira: filters / dashboards": {slug: jira-filters-dashboards, access: read}
+  "Jira: JQL parse/sanitize/autocomplete": {slug: jira-jql-tools, access: read}
+  "Jira: create project / workflows / screens": {slug: jira-admin, access: manage}
+  "Agile: boards / sprints / backlog / epics": {slug: agile-read, access: read}
+  "Agile: manage sprint / rank / move": {slug: agile-write, access: write}
+  "JSM: requests / SLA / KB / orgs": {slug: jsm-read, access: read}
+  "JSM: create request / comment / approve": {slug: jsm-write, access: write}
+  "Confluence: get content (all types)": {slug: conf-content-get, access: read}
+  "Confluence: CQL search": {slug: conf-cql-search, access: search}
+  "Confluence: children / ancestors / descendants": {slug: conf-tree, access: read}
+  "Confluence: versions / diff": {slug: conf-versions-diff, access: read}
+  "Confluence: comments / attachments / labels": {slug: conf-comments-attachments-labels, access: read}
+  "Confluence: permissions / restrictions": {slug: conf-permissions, access: read}
+  "Confluence: tasks / templates / reactions": {slug: conf-tasks-templates-reactions, access: read}
+  "Confluence: create / update / move / copy / archive": {slug: conf-content-write, access: write}
+  "Confluence: delete content": {slug: conf-content-delete, access: delete}
+  "Confluence: macro resolution": {slug: conf-macros, access: read}
+  "Confluence: infographic / MAUI app": {slug: conf-special, access: write}
+  "Export: Jira CSV": {slug: export-jira-csv, access: read, phase: P5}
+  "Export: Confluence page PDF/Word": {slug: export-conf-page, access: read, phase: P5}
+  "Export: Confluence space": {slug: export-conf-space, access: read, phase: P5}
+  "Teamwork Graph context / objects": {slug: graph-context, access: read}
+  "Rovo semantic search": {slug: graph-semantic, access: search}
+  "Arbitrary GraphQL": {slug: graphql-exec, access: read, phase: P5}
+  "Warehouse tables / SQL": {slug: lake-tables, access: read, phase: P5}
+  "Webhook management": {slug: webhook-management, access: manage, phase: P3}
+  "Org audit events / events-stream": {slug: org-audit, access: read, phase: P4}
+  "Automation incoming webhook": {slug: automation-trigger, access: write, phase: P3}
+  "Every remaining endpoint": {slug: long-tail, access: read, phase: P6}
+
+# §9 protocol -> phase (workstream is derived from the name)
+protocol_phases:
+  JiraIssueReader: P0
+  JiraIssueSearcher: P0
+  JiraProjectReader: P0
+  JiraMetadataReader: P0
+  JiraUserDirectory: P0
+  JiraJqlTools: P0
+  JiraAgileReader: P0
+  JsmReader: P0
+  ConfluenceContentReader: P0
+  ConfluenceSearcher: P0
+  ConfluenceSpaceReader: P0
+  ConfluenceTemplateReader: P0
+  RawRequester: P0
+  IdentityReader: P0
+  TeamworkGraphReader: P1
+  SemanticSearcher: P1
+  JiraIssueWriter: P2
+  JiraIssueDeleter: P2
+  JiraProjectWriter: P2
+  JiraAdmin: P2
+  JiraAgileWriter: P2
+  JsmWriter: P2
+  ConfluenceContentWriter: P2
+  ConfluenceSpaceWriter: P2
+  ConfluencePermissionWriter: P2
+  ConfluenceContentDeleter: P2
+  TeamworkGraphWriter: P2
+  AutomationTrigger: P3
+  WebhookManager: P3
+  OrgAuditReader: P4
+  GraphQLExecutor: P5
+  AnalyticsReader: P5
+  JiraExporter: P5
+  ConfluenceExporter: P5
+
+# §10 backend -> (phase, workstream)
+backends:
+  REST: [P0, REST]
+  REST_DC: [P5, DC]
+  MCP: [P1, MCP]
+  GRAPHQL: [P5, GQL]
+  ACLI: [P5, CLI]
+  TWG: [P5, CLI]
+  JIRA_CLI: [P5, CLI]
+  BROWSER: [P5, BROWSER]
+  DATA_LAKE: [P5, LAKE]
+  FORGE: [P4, FORGE]
+  ORG_ADMIN: [P4, ORG]
+  DATABASE: [P5, DC]
+
+# §16.3 tool rows: first matching keyword in the Access column decides the phase
+tool_phases:
+  default: P1
+  by_access:
+    WRITE: P2
+    DELETE: P2
+    ANALYTICS: P5
+    ORG_ADMIN: P5
+  by_tool:
+    events_list_methods: P3
+    atlassian_discover_operations: P6
+    atlassian_call_operation: P6
+
+# §17 security concern keyword -> phase (first match wins; default P2)
+security_phases:
+  - [Credential, P0]
+  - [Least privilege, P1]
+  - [Tenant, P0]
+  - [Logging, P0]
+  - [Prompt injection, P1]
+  - [Destructive, P2]
+  - [Data Lake, P5]
+  - [Browser, P5]
+  - [Direct DB, P5]
+  - [Webhook ingress, P3]
+  - [Private pull, P3]
+  - [Forge Realtime, P4]
+  - [Forge, P4]
+  - [Automation, P3]
+  - [Slack, P4b]
+  - [Relays, P4]
+  - [Connect, P4c]
+  - [AWS, P4]
+  - [Probes, P3]
+  - [Supply chain, P0]
+
+# §18 testing layer keyword -> phase (first match wins; default P0)
+qa_phases:
+  - [Delivery-method, P3]
+  - [End-to-end, P4]
+  - [Events, P3]
+  - [Browser, P5]
+  - [CLIs, P5]
+  - [MCP, P1]
+  - [Policy, P2]
+  - [API drift, P6]
+  - [Live smoke, P1]
+  - [Docs, P1]
+
+# §22 verify item number -> phase (the phase of the component that isolates the uncertainty)
+verify_phases:
+  1: P3
+  2: P4
+  3: P5
+  4: P5
+  5: P5
+  6: P4
+  7: P4
+  8: P1
+  9: P1
+  10: P5
+  11: P0
+  12: P3
+  13: P0
+  14: P3
+  15: P3
+  16: P4
+  17: P3
+  18: P4b
+  19: P4b
+  20: P4b
+  21: P4b
+  22: P4b
+  23: P4
+  24: P4
+  25: P4
+  26: P4b
+  27: P4
+
+# §14.2 cross-cutting rule -> phase
+cc_phases:
+  default: P3
+  overrides: {CC-06: P4c, CC-12: P4, CC-13: P4, CC-14: P4}
+
+# Workstream for DM tasks by ledger phase/kind (default EVENTS; notification methods use NOTIFY)
+notify_phases: [P4b]

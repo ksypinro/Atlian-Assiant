@@ -1,0 +1,21 @@
+id: P0.DOCS.001
+title: Docstring lint (required sections, examples runnable as doctests)
+type: build
+phase: P0
+workstream: DOCS
+design_refs:
+- §16.5
+- §18
+research_refs: []
+depends_on:
+- P0.QA.002
+deliverables:
+- tools/docgen.py (lint)
+acceptance:
+- Missing section fails; examples run against FakeBackend
+checks:
+- pytest tests/docs/test_p0_docs_001.py -q
+size: S
+human_only: false
+needs: none
+source: authored

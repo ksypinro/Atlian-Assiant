@@ -1,0 +1,23 @@
+id: P0.CORE.001
+title: 'Package scaffold: layout, pyproject extras, ruff + mypy strict, py.typed'
+type: build
+phase: P0
+workstream: CORE
+design_refs:
+- §4
+- §19
+research_refs: []
+depends_on: []
+deliverables:
+- pyproject.toml
+- atlassian_client/
+acceptance:
+- Package layout from section 4 exists and imports
+- mypy --strict and ruff pass on the empty skeleton
+- Optional extras declared as in section 19
+checks:
+- mypy --strict atlassian_client
+size: M
+human_only: false
+needs: none
+source: authored

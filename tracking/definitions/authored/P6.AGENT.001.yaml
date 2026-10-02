@@ -1,0 +1,21 @@
+id: P6.AGENT.001
+title: discover/call meta-tools over the operation index
+type: build
+phase: P6
+workstream: AGENT
+design_refs:
+- §16.3
+research_refs: []
+depends_on:
+- P6.REST.001
+- P1.AGENT.002
+deliverables:
+- atlassian_client/agent/
+acceptance:
+- atlassian_discover_operations and atlassian_call_operation honour policy
+checks:
+- pytest tests/agent/test_p6_agent_001.py -q
+size: M
+human_only: false
+needs: none
+source: authored

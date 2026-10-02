@@ -1,0 +1,120 @@
+{
+  "$defs": {
+    "TaskType": {
+      "enum": [
+        "build",
+        "test",
+        "docs",
+        "research",
+        "security",
+        "gate",
+        "dcr"
+      ],
+      "title": "TaskType",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "title": "Id",
+      "type": "string"
+    },
+    "title": {
+      "title": "Title",
+      "type": "string"
+    },
+    "type": {
+      "$ref": "#/$defs/TaskType",
+      "default": "build"
+    },
+    "phase": {
+      "title": "Phase",
+      "type": "string"
+    },
+    "workstream": {
+      "title": "Workstream",
+      "type": "string"
+    },
+    "design_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Design Refs",
+      "type": "array"
+    },
+    "research_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Research Refs",
+      "type": "array"
+    },
+    "depends_on": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Depends On",
+      "type": "array"
+    },
+    "deliverables": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Deliverables",
+      "type": "array"
+    },
+    "acceptance": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Acceptance",
+      "type": "array"
+    },
+    "checks": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Checks",
+      "type": "array"
+    },
+    "size": {
+      "default": "M",
+      "enum": [
+        "S",
+        "M"
+      ],
+      "title": "Size",
+      "type": "string"
+    },
+    "human_only": {
+      "default": false,
+      "title": "Human Only",
+      "type": "boolean"
+    },
+    "needs": {
+      "default": "none",
+      "enum": [
+        "none",
+        "credentials",
+        "sandbox",
+        "decision"
+      ],
+      "title": "Needs",
+      "type": "string"
+    },
+    "source": {
+      "default": "authored",
+      "title": "Source",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "title",
+    "phase",
+    "workstream"
+  ],
+  "title": "Task",
+  "type": "object"
+}

@@ -1,0 +1,20 @@
+id: P0.CORE.002
+title: 'capabilities.py: Access, BackendKind, Product, Deployment, Operation'
+type: build
+phase: P0
+workstream: CORE
+design_refs:
+- §5.1
+research_refs: []
+depends_on:
+- P0.CORE.001
+deliverables:
+- atlassian_client/capabilities.py
+acceptance:
+- Enums and frozen Operation dataclass exactly as specified
+checks:
+- pytest tests/core/test_p0_core_002.py -q
+size: S
+human_only: false
+needs: none
+source: authored

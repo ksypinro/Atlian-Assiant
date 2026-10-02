@@ -1,0 +1,21 @@
+id: P3.EVENTS.006
+title: AutomationRuleTemplate, STANDARD_ENVELOPE, PayloadMapping, AutomationRuleProvisioner
+type: build
+phase: P3
+workstream: EVENTS
+design_refs:
+- §14.7
+research_refs: []
+depends_on:
+- P3.EVENTS.002
+deliverables:
+- atlassian_client/events/automation.py
+acceptance:
+- SNS/SSM/JEC rejected for Confluence
+- import_bundle/api/browser/guided strategies
+checks:
+- pytest tests/events/test_p3_events_006.py -q
+size: M
+human_only: false
+needs: none
+source: authored

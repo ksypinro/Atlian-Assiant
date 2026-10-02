@@ -1,0 +1,21 @@
+id: P0.CORE.019
+title: Telemetry, RedactingFilter, optional OpenTelemetry spans
+type: build
+phase: P0
+workstream: CORE
+design_refs:
+- §7.10
+research_refs: []
+depends_on:
+- P0.CORE.001
+deliverables:
+- atlassian_client/core/telemetry.py
+- atlassian_client/core/redaction.py
+acceptance:
+- Authorization/token/secret values masked; no bodies by default
+checks:
+- pytest tests/core/test_p0_core_019.py -q
+size: S
+human_only: false
+needs: none
+source: authored

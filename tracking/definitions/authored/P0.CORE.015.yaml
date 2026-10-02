@@ -1,0 +1,26 @@
+id: P0.CORE.015
+title: Backend base protocol, Router, SelectionPolicy, CircuitBreaker, fallback rules
+type: build
+phase: P0
+workstream: CORE
+design_refs:
+- §9.1
+- §12.3
+- §12.4
+research_refs: []
+depends_on:
+- P0.CORE.002
+- P0.CORE.005
+deliverables:
+- atlassian_client/protocols/base.py
+- atlassian_client/routing.py
+acceptance:
+- Fallback only on Unsupported/Unavailable and only when nothing was sent
+- Cursor pins backend; forced backend disables fallback
+- Preset orders from section 12.3
+checks:
+- pytest tests/core/test_p0_core_015.py -q
+size: M
+human_only: false
+needs: none
+source: authored
