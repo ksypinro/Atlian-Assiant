@@ -20,6 +20,7 @@ from ..capabilities import Access, Operation
 from ..core.errors import AtlassianError
 from ..formats.render import truncate
 from ..models.common import AtlassianModel, Page
+from ..policy import PlannedAction
 
 if TYPE_CHECKING:
     from ..facade.client import AsyncAtlassianClient
@@ -111,6 +112,24 @@ CURATED: tuple[ToolSpec, ...] = (
     _t("confluence_list_attachments", "confluence.attachments.list", "You need to see which files are attached to a page."),
     _t("confluence_read_attachment", "confluence.attachments.download", "You need the text of a specific page attachment (size-capped).",
        forced={"extract_text": True}),
+    # ---- writes (P2): hidden unless the policy allows WRITE/DELETE; always preview with dry_run=true first ----
+    _t("jira_create_issue", "jira.issues.create", "The user asks you to create a ticket. Check issue types with jira_get_create_fields first.",
+       "Changing an existing issue: use jira_update_issue.", hidden=("drafts",)),
+    _t("jira_update_issue", "jira.issues.edit", "Change an issue's summary, description, labels or fields.", "Changing status: use jira_transition_issue."),
+    _t("jira_transition_issue", "jira.issues.transition", "Move an issue to another status (list options with jira_list_transitions first)."),
+    _t("jira_add_comment", "jira.issues.add_comment", "The user asks you to comment on an issue."),
+    _t("jira_add_worklog", "jira.issues.add_worklog", "The user asks to log time on an issue."),
+    _t("jira_link_issues", "jira.issues.link", "The user asks to relate, block or duplicate issues."),
+    _t("jira_assign_issue", "jira.issues.assign", "The user asks to assign or unassign an issue."),
+    _t("jsm_add_request_comment", "jsm.add_comment", "Reply to a customer (public) or leave an internal note. Choose `public` deliberately."),
+    _t("confluence_create_page", "confluence.content.create", "The user asks you to write a new page."),
+    _t("confluence_update_page", "confluence.content.update", "Edit an existing page. Fetch it first and pass its version so conflicts are detected."),
+    _t("confluence_add_comment", "confluence.comments.create", "The user asks you to comment on a page."),
+    _t("confluence_add_labels", "confluence.labels.add", "Classify a page with labels."),
+    _t("confluence_move_page", "confluence.content.move", "Reorganize a space by moving a page under another page."),
+    _t("confluence_archive_page", "confluence.content.archive", "Retire pages without deleting them (preferred over delete)."),
+    _t("jira_delete_issue", "jira.issues.delete", "ONLY when the user explicitly asks to delete an issue.", "Closing work: use jira_transition_issue."),
+    _t("confluence_delete_page", "confluence.content.delete", "ONLY when the user explicitly asks to delete a page.", "Retiring a page: use confluence_archive_page."),
     _t("atlassian_semantic_search", "graph.semantic_search", "Fuzzy or cross-product questions where exact JQL/CQL is unknown.",
        "Exact filters: use jira_search_issues / confluence_search_cql (cheaper, no credits)."),
     _t("atlassian_graph_context", "graph.context", "You need RELATIONSHIPS and context around an issue or page."),
@@ -203,7 +222,14 @@ def _clean_schema(schema: dict[str, Any], docs: Mapping[str, str] | None = None)
     return schema
 
 
+def _plan_dict(plan: PlannedAction) -> dict[str, Any]:
+    return {"planned": True, "operation": plan.operation.id, "access": plan.operation.access.name, "target": plan.target, "summary": plan.summary,
+            "arguments": _jsonable(dict(plan.arguments)), "reversible": plan.reversible, "warnings": list(plan.warnings)}
+
+
 def _jsonable(value: Any) -> Any:
+    if isinstance(value, PlannedAction):
+        return _plan_dict(value)
     if isinstance(value, BaseModel):
         return value.model_dump(mode="json", exclude={"raw"} if isinstance(value, AtlassianModel) else None)
     if isinstance(value, Page):
@@ -219,6 +245,12 @@ def _jsonable(value: Any) -> Any:
 
 def render_result(value: Any, per_item_chars: int = 1500) -> str:
     """Compact Markdown for a model, a Page, a list or a plain value."""
+    if isinstance(value, PlannedAction):
+        lines = [f"DRY RUN - nothing was changed. Planned action: {value.summary}", f"- operation: {value.operation.id} ({value.operation.access.name})",
+                 f"- reversible: {'yes' if value.reversible else 'no'}"]
+        lines += [f"- WARNING: {w}" for w in value.warnings]
+        lines.append("Show this to the user; if they approve, call the same tool again WITHOUT dry_run.")
+        return "\n".join(lines)
     if value is None:
         return "OK (no content)."
     if isinstance(value, Page):

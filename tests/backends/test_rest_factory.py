@@ -53,13 +53,17 @@ def test_every_facade_operation_that_rest_serves_is_declared_supported():
 
     client = ClientFactory().build_async(AtlassianConfig(site="x"), backends=[], extra_backends={BackendKind.REST: FakeBackend()})
     facade_ops = {op for _, ns in walk_namespaces(client) for op in ns._OPS}
-    mcp_only = {"confluence.space.instructions.get", "graph.context", "graph.object.get", "graph.search.semantic"}          # no REST API; served by the MCP backend
-    assert facade_ops - mcp_only <= SUPPORTED, sorted(facade_ops - mcp_only - SUPPORTED)
+    not_on_rest = {"confluence.space.instructions.get", "graph.context", "graph.object.get", "graph.search.semantic", "graph.context.add",
+                   "jira.issue.hierarchy.convert", "confluence.content.unarchive", "confluence.content.set_status", "confluence.content.public_link.set",
+                   "confluence.reaction.add", "confluence.space.instructions.set", "confluence.star.content", "confluence.special.infographic.create",
+                   "confluence.special.infographic.edit", "confluence.special.maui_app.create", "confluence.special.maui_app.edit", "confluence.special.maui_app.get"}   # no REST endpoint; MCP serves them
+    assert facade_ops - not_on_rest <= SUPPORTED, sorted(facade_ops - not_on_rest - SUPPORTED)
+    assert not_on_rest.isdisjoint(SUPPORTED)
 
 
 def test_every_supported_operation_is_reachable_through_a_component():
     be = ClientFactory().backend(BackendKind.REST, AtlassianConfig(**BASIC))
-    assert len(be._parts) == 6 and all(p.transport is be.transport for p in be._parts)
+    assert len(be._parts) == 10 and all(p.transport is be.transport for p in be._parts)
 
 
 @pytest.mark.anyio

@@ -40,13 +40,34 @@ def _link_page(items: list[Any], q: dict[str, str], path: str) -> dict[str, Any]
     return body
 
 
+def _parse_multipart(content: bytes, ctype: str) -> dict[str, tuple[str | None, bytes]]:
+    """Minimal multipart/form-data parser: {field: (filename or None, bytes)}."""
+    boundary = ctype.split("boundary=")[1].strip('"').encode()
+    out: dict[str, tuple[str | None, bytes]] = {}
+    for part in content.split(b"--" + boundary):
+        if part.startswith(b"\r\n"):
+            part = part[2:]
+        if part.endswith(b"\r\n"):
+            part = part[:-2]
+        if not part or part.strip() == b"--":
+            continue
+        head, _, data = part.partition(b"\r\n\r\n")
+        disp = head.decode(errors="replace")
+        name = re.search(r'name="([^"]*)"', disp)
+        fname = re.search(r'filename="([^"]*)"', disp)
+        if name:
+            out[name.group(1)] = (fname.group(1) if fname else None, data)
+    return out
+
+
 class ScenarioServer:
     def __init__(self, raw: dict[str, Any] | None = None) -> None:
         self.raw = raw or scenario()
         self.requests: list[dict[str, Any]] = []
-        self.fail_next: list[tuple[int, dict[str, str]]] = []   # (status, headers) to return before serving normally
+        self.fail_next: list[tuple[Any, ...]] = []   # (status, headers[, method]) to return before serving normally
         self.routes: list[tuple[str, re.Pattern[str], Handler]] = []
         self._register()
+        self._register_writes()
 
     # ---- plumbing ----
     def route(self, method: str, pattern: str) -> Callable[[Handler], Handler]:
@@ -58,16 +79,23 @@ class ScenarioServer:
     def __call__(self, request: httpx.Request) -> httpx.Response:
         parts = urlsplit(str(request.url))
         q = dict(parse_qsl(parts.query))
-        body = json.loads(request.content) if request.content and request.headers.get("content-type", "").startswith("application/json") else None
+        ctype = request.headers.get("content-type", "")
+        body: Any = None
+        if request.content and ctype.startswith("application/json"):
+            body = json.loads(request.content)
+        elif request.content and ctype.startswith("multipart/"):
+            body = {"_multipart": _parse_multipart(request.content, ctype)}
         self.requests.append({"method": request.method, "path": parts.path, "query": q, "json": body, "headers": dict(request.headers)})
-        if self.fail_next:
-            status, headers = self.fail_next.pop(0)
+        if self.fail_next and (len(self.fail_next[0]) < 3 or self.fail_next[0][2] == request.method):
+            status, headers = self.fail_next.pop(0)[:2]
             return httpx.Response(status, headers=headers, json={"errorMessages": [f"forced {status}"]})
         routed = re.sub(r"^/ex/(?:jira|confluence)/[^/]+", "", parts.path)         # OAuth / service-account gateway prefix
         for method, pat, fn in self.routes:
             m = pat.match(routed)
             if request.method == method and m:
                 status, payload = fn(m, q, body)
+                if payload is None:
+                    return httpx.Response(status)
                 if isinstance(payload, bytes):
                     return httpx.Response(status, content=payload)
                 return httpx.Response(status, json=payload)
@@ -79,11 +107,11 @@ class ScenarioServer:
     # ---- routes ----
     def _register(self) -> None:
         r, j, a, s, c = self.route, self.raw["jira"], self.raw["agile"], self.raw["jsm"], self.raw["confluence"]
-        issues = {i["key"]: i for i in j["issues"]}
         J, A, S, V2, V1 = r"/rest/api/3", r"/rest/agile/1.0", r"/rest/servicedeskapi", r"/wiki/api/v2", r"/wiki/rest/api"
 
         def issue_or_404(key: str) -> dict[str, Any] | None:
-            return issues.get(key.upper())
+            found: dict[str, Any] | None = next((i for i in j["issues"] if i["key"] == key.upper()), None)
+            return found
 
         def missing(what: str) -> tuple[int, Any]:
             return 404, {"errorMessages": [f"{what} does not exist or you do not have permission to see it."], "errors": {}}
@@ -390,7 +418,8 @@ class ScenarioServer:
             def _l(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
                 if not page_or_404(m.group(1)):
                     return missing("Page")
-                return 200, _link_page(c[key].get(m.group(1), []), q, f"/pages/{m.group(1)}/{suffix}")
+                items = [x for x in c[key].get(m.group(1), []) if not q.get("key") or x.get("key") == q["key"]]
+                return 200, _link_page(items, q, f"/pages/{m.group(1)}/{suffix}")
 
         listing("versions", "versions")
         listing("labels", "labels")
@@ -457,3 +486,522 @@ class ScenarioServer:
         def template(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
             x = next((x for x in c["templates"] if x["templateId"] == m.group(1)), None)
             return (200, x) if x else missing("Template")
+
+
+    # ------------------------------------------------------------------------------------------------------------
+    # Stateful write routes: they mutate ``self.raw`` so read-after-write works against the same dataset.
+    # ------------------------------------------------------------------------------------------------------------
+    def _register_writes(self) -> None:
+        r, j, a, s, c = self.route, self.raw["jira"], self.raw["agile"], self.raw["jsm"], self.raw["confluence"]
+        J, A, S, V2, V1 = r"/rest/api/3", r"/rest/agile/1.0", r"/rest/servicedeskapi", r"/wiki/api/v2", r"/wiki/rest/api"
+        counter = {"n": 5000}
+        me = j["myself"]
+
+        def nxt() -> int:
+            counter["n"] += 1
+            return counter["n"]
+
+        def find(key: str) -> dict[str, Any] | None:
+            found: dict[str, Any] | None = next((i for i in j["issues"] if i["key"] == key.upper()), None)
+            return found
+
+        def missing(what: str) -> tuple[int, Any]:
+            return 404, {"errorMessages": [f"{what} does not exist or you do not have permission to see it."], "errors": {}}
+
+        def make_issue(fields: dict[str, Any]) -> dict[str, Any]:
+            proj = next((p for p in j["projects"] if p["key"] == fields["project"]["key"]), {"id": "9", "key": fields["project"]["key"], "name": ""})
+            n = nxt()
+            user = next((u for u in j["users"] if u["accountId"] == (fields.get("assignee") or {}).get("accountId")), None)
+            issue: dict[str, Any] = {"id": str(10000 + n), "key": f"{proj['key']}-{n}", "fields": {
+                "summary": fields.get("summary"), "status": {"id": "1", "name": "To Do", "statusCategory": {"name": "To Do"}},
+                "issuetype": {"name": (fields.get("issuetype") or {}).get("name", "Task")}, "project": {"id": proj["id"], "key": proj["key"], "name": proj.get("name")},
+                "assignee": user, "reporter": me, "labels": list(fields.get("labels", [])), "description": fields.get("description"),
+                "created": "2026-10-01T10:00:00.000+0000", "updated": "2026-10-01T10:00:00.000+0000", "attachment": [], "issuelinks": [],
+                **{k: v for k, v in fields.items() if k.startswith("customfield_")}}}
+            if fields.get("parent"):
+                issue["fields"]["parent"] = fields["parent"]
+            j["issues"].append(issue)
+            return issue
+
+        @r("POST", J + "/issue")
+        def create_issue(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            f = b["fields"]
+            if not str(f.get("summary") or "").strip():
+                return 400, {"errorMessages": [], "errors": {"summary": "You must specify a summary of the issue."}}
+            i = make_issue(f)
+            return 201, {"id": i["id"], "key": i["key"], "self": f"https://example.atlassian.net/rest/api/3/issue/{i['id']}"}
+
+        @r("POST", J + "/issue/bulk")
+        def bulk(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            made = [make_issue(u["fields"]) for u in b["issueUpdates"]]
+            return 201, {"issues": [{"id": i["id"], "key": i["key"]} for i in made], "errors": []}
+
+        @r("PUT", J + r"/issue/([A-Za-z0-9-]+)")
+        def edit(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            i = find(m.group(1))
+            if not i:
+                return missing("Issue")
+            i["fields"].update(b.get("fields", {}))
+            for op in (b.get("update") or {}).get("labels", []):
+                if "add" in op and op["add"] not in i["fields"]["labels"]:
+                    i["fields"]["labels"].append(op["add"])
+                if "remove" in op and op["remove"] in i["fields"]["labels"]:
+                    i["fields"]["labels"].remove(op["remove"])
+            return 204, None
+
+        @r("PUT", J + r"/issue/([A-Za-z0-9-]+)/assignee")
+        def assign(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            i = find(m.group(1))
+            if not i:
+                return missing("Issue")
+            i["fields"]["assignee"] = next((u for u in j["users"] if u["accountId"] == b["accountId"]), None) if b["accountId"] else None
+            return 204, None
+
+        @r("POST", J + r"/issue/([A-Za-z0-9-]+)/transitions")
+        def transition(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            i = find(m.group(1))
+            t = next((t for t in j["transitions"].get(m.group(1).upper(), []) if t["id"] == b["transition"]["id"]), None)
+            if not i or not t:
+                return 400, {"errorMessages": ["Transition is not valid for this issue."], "errors": {}}
+            i["fields"]["status"] = t["to"]
+            for op in (b.get("update") or {}).get("comment", []):
+                j["comments"].setdefault(i["key"], []).append({"id": f"c{nxt()}", "author": me, "body": op["add"]["body"], "created": "2026-10-01T10:00:00.000+0000"})
+            return 204, None
+
+        @r("POST", J + r"/issue/([A-Za-z0-9-]+)/comment")
+        def add_comment(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            if not find(m.group(1)):
+                return missing("Issue")
+            cm = {"id": f"c{nxt()}", "author": me, "body": b["body"], "created": "2026-10-01T10:00:00.000+0000", "updated": "2026-10-01T10:00:00.000+0000",
+                  **({"visibility": b["visibility"]} if b.get("visibility") else {})}
+            j["comments"].setdefault(m.group(1).upper(), []).append(cm)
+            return 201, cm
+
+        @r("PUT", J + r"/issue/([A-Za-z0-9-]+)/comment/(\w+)")
+        def edit_comment(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            cm = next((x for x in j["comments"].get(m.group(1).upper(), []) if x["id"] == m.group(2)), None)
+            if not cm:
+                return missing("Comment")
+            cm["body"] = b["body"]
+            return 200, cm
+
+        @r("DELETE", J + r"/issue/([A-Za-z0-9-]+)/comment/(\w+)")
+        def del_comment(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            items = j["comments"].get(m.group(1).upper(), [])
+            if not any(x["id"] == m.group(2) for x in items):
+                return missing("Comment")
+            j["comments"][m.group(1).upper()] = [x for x in items if x["id"] != m.group(2)]
+            return 204, None
+
+        @r("POST", J + r"/issue/([A-Za-z0-9-]+)/worklog")
+        def worklog(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            if not find(m.group(1)):
+                return missing("Issue")
+            w = {"id": f"w{nxt()}", "author": me, "timeSpent": b["timeSpent"], "timeSpentSeconds": 3600, "started": b.get("started", "2026-10-01T09:00:00.000+0000"),
+                 **({"comment": b["comment"]} if b.get("comment") else {})}
+            j["worklogs"].setdefault(m.group(1).upper(), []).append(w)
+            return 201, w
+
+        @r("POST", J + "/issueLink")
+        def link(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            i, o = find(b["inwardIssue"]["key"]), find(b["outwardIssue"]["key"])
+            if not i or not o:
+                return missing("Issue")
+            i["fields"]["issuelinks"].append({"id": f"l{nxt()}", "type": {"name": b["type"]["name"], "outward": b["type"]["name"].lower(), "inward": "inward"},
+                                              "outwardIssue": {"key": o["key"], "fields": {"summary": o["fields"]["summary"]}}})
+            return 201, None
+
+        @r("POST", J + r"/issue/([A-Za-z0-9-]+)/remotelink")
+        def remote(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            if not find(m.group(1)):
+                return missing("Issue")
+            rl = {"id": nxt(), "object": b["object"]}
+            j["remote_links"].setdefault(m.group(1).upper(), []).append(rl)
+            return 201, rl
+
+        @r("POST", J + r"/issue/([A-Za-z0-9-]+)/attachments")
+        def attach(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            i = find(m.group(1))
+            if not i:
+                return missing("Issue")
+            fname, data = b["_multipart"]["file"]
+            att = {"id": f"att{nxt()}", "filename": fname, "size": len(data), "mimeType": "text/plain", "author": me, "created": "2026-10-01T10:00:00.000+0000"}
+            i["fields"]["attachment"].append(att)
+            j["attachment_content"][att["id"]] = data
+            return 200, [att]
+
+        @r("POST", J + r"/issue/([A-Za-z0-9-]+)/watchers")
+        def watch(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            w = j["watchers"].setdefault(m.group(1).upper(), [])
+            u = next((u for u in j["users"] if u["accountId"] == b), None)
+            if u and u not in w:
+                w.append(u)
+            return 204, None
+
+        @r("DELETE", J + r"/issue/([A-Za-z0-9-]+)/watchers")
+        def unwatch(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            j["watchers"][m.group(1).upper()] = [u for u in j["watchers"].get(m.group(1).upper(), []) if u["accountId"] != q.get("accountId")]
+            return 204, None
+
+        @r("PUT", J + r"/issue/([A-Za-z0-9-]+)/properties/([^/]+)")
+        def set_prop(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            j["properties"].setdefault(m.group(1).upper(), {})[m.group(2)] = {"key": m.group(2), "value": b}
+            return 200, None
+
+        @r("DELETE", J + r"/issue/([A-Za-z0-9-]+)")
+        def delete_issue(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            if not find(m.group(1)):
+                return missing("Issue")
+            j["issues"] = [i for i in j["issues"] if i["key"] != m.group(1).upper()]
+            return 204, None
+
+        @r("DELETE", J + r"/attachment/(\w+)")
+        def delete_att(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            if m.group(1) not in j["attachment_content"]:
+                return missing("Attachment")
+            del j["attachment_content"][m.group(1)]
+            for i in j["issues"]:
+                i["fields"]["attachment"] = [x for x in i["fields"].get("attachment", []) if x["id"] != m.group(1)]
+            return 204, None
+
+        @r("POST", J + "/version")
+        def create_version(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            proj = next((p for p in j["projects"] if int(p["id"]) == b["projectId"]), None)
+            v = {"id": f"v{nxt()}", "name": b["name"], "released": False, "releaseDate": b.get("releaseDate")}
+            j["versions"].setdefault(proj["key"] if proj else "?", []).append(v)
+            return 201, v
+
+        @r("PUT", J + r"/version/(\w+)")
+        def update_version(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            for vs in j["versions"].values():
+                for v in vs:
+                    if v["id"] == m.group(1):
+                        v.update(b)
+                        return 200, v
+            return missing("Version")
+
+        @r("DELETE", J + r"/version/(\w+)")
+        def delete_version(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            for k, vs in j["versions"].items():
+                if any(v["id"] == m.group(1) for v in vs):
+                    j["versions"][k] = [v for v in vs if v["id"] != m.group(1)]
+                    return 204, None
+            return missing("Version")
+
+        @r("POST", J + "/project")
+        def create_project(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            p = {"id": str(nxt()), "key": b["key"], "name": b["name"], "projectTypeKey": b.get("projectTypeKey")}
+            j["projects"].append(p)
+            return 201, p
+
+        @r("PUT", J + r"/project/([A-Z]+)")
+        def update_project(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            p = next((p for p in j["projects"] if p["key"] == m.group(1)), None)
+            if not p:
+                return missing("Project")
+            p.update(b)
+            return 200, p
+
+        @r("GET", J + "/workflow/search")
+        def workflows(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            return 200, {"values": [{"id": {"entityId": "wf1", "name": "Software workflow"}, "statuses": j["statuses"]}]}
+
+        @r("GET", J + "/screens")
+        def screens(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            return 200, {"values": [{"id": 1, "name": "Default screen"}]}
+
+        @r("PUT", J + r"/screens/(\d+)")
+        def update_screen(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            return 200, {"id": int(m.group(1)), **b}
+
+        # ---- agile ----
+        @r("POST", A + "/sprint")
+        def create_sprint(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            sp = {"id": nxt(), "name": b["name"], "state": "future", "goal": b.get("goal")}
+            a["sprints"].setdefault(str(b["originBoardId"]), []).append(sp)
+            return 201, sp
+
+        @r("POST", A + r"/sprint/(\d+)")
+        def update_sprint(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            for v in a["sprints"].values():
+                for sp in v:
+                    if str(sp["id"]) == m.group(1):
+                        sp.update(b)
+                        return 200, sp
+            return missing("Sprint")
+
+        @r("DELETE", A + r"/sprint/(\d+)")
+        def delete_sprint(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            for k, v in a["sprints"].items():
+                if any(str(sp["id"]) == m.group(1) for sp in v):
+                    a["sprints"][k] = [sp for sp in v if str(sp["id"]) != m.group(1)]
+                    return 204, None
+            return missing("Sprint")
+
+        @r("POST", A + r"/sprint/(\d+)/issue")
+        def to_sprint(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            a["sprint_issues"].setdefault(m.group(1), []).extend(i for i in (find(k) for k in b["issues"]) if i)
+            return 204, None
+
+        @r("POST", A + "/backlog/issue")
+        def to_backlog(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            return 204, None
+
+        @r("PUT", A + "/issue/rank")
+        def rank(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            return 204, None
+
+        @r("POST", A + "/board")
+        def create_board(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            board = {"id": nxt(), "name": b["name"], "type": b["type"]}
+            a["boards"].append(board)
+            return 201, board
+
+        # ---- JSM ----
+        @r("POST", S + "/request")
+        def create_request(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            key = f"OPS-{nxt()}"
+            req = {"issueId": str(nxt()), "issueKey": key, "requestTypeId": b["requestTypeId"], "serviceDeskId": b["serviceDeskId"], "currentStatus": {"status": "Open"},
+                   "reporter": me, "createdDate": {"iso8601": "2026-10-01T10:00:00+0000"},
+                   "requestFieldValues": [{"fieldId": k, "value": v} for k, v in b["requestFieldValues"].items()]}
+            s["requests"].append(req)
+            return 201, req
+
+        @r("POST", S + r"/request/([A-Z]+-\d+)/comment")
+        def req_comment(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            if not any(x["issueKey"] == m.group(1) for x in s["requests"]):
+                return missing("Request")
+            cm = {"id": f"rc{nxt()}", "author": me, "body": b["body"], "public": b["public"], "created": {"iso8601": "2026-10-01T10:00:00+0000"}}
+            s["comments"].setdefault(m.group(1), []).append(cm)
+            return 201, cm
+
+        @r("GET", S + r"/request/([A-Z]+-\d+)/transition")
+        def req_transitions(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            return 200, {"values": [{"id": "711", "name": "Resolve this issue"}]}
+
+        @r("POST", S + r"/request/([A-Z]+-\d+)/transition")
+        def req_transition(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            for x in s["requests"]:
+                if x["issueKey"] == m.group(1):
+                    x["currentStatus"] = {"status": "Resolved"}
+                    return 204, None
+            return missing("Request")
+
+        @r("POST", S + r"/request/([A-Z]+-\d+)/approval/(\w+)")
+        def approval(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            return 200, {"id": m.group(2), "finalDecision": b["decision"]}
+
+        @r("POST", S + r"/servicedesk/(\d+)/customer")
+        def add_customers(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            s["customers"].setdefault(m.group(1), []).extend({"accountId": x, "displayName": x} for x in b["accountIds"])
+            return 204, None
+
+        # ---- Confluence v2 ----
+        pages = c["pages"]
+        coll = {"pages": "page", "blogposts": "blogpost", "folders": "folder"}
+
+        def new_content(kind: str, b: Any) -> dict[str, Any]:
+            cid = str(nxt())
+            page = {"id": cid, "status": b.get("status", "current"), "title": b["title"], "spaceId": b.get("spaceId"), "parentId": b.get("parentId"), "authorId": "acc-ann",
+                    "createdAt": "2026-10-01T10:00:00.000Z", "version": {"number": 1, "createdAt": "2026-10-01T10:00:00.000Z"},
+                    "body": {"storage": {"value": (b.get("body") or {}).get("value", "")}}, "_links": {"webui": f"/spaces/ENG/pages/{cid}"}}
+            pages[cid] = page
+            c["versions"][cid] = [{"number": 1, "authorId": "acc-ann", "createdAt": "2026-10-01T10:00:00.000Z"}]
+            if b.get("parentId"):
+                c["children"].setdefault(str(b["parentId"]), []).append(cid)
+            return page
+
+        for path, kind in coll.items():
+            self.routes.append(("POST", re.compile(f"^{V2}/{path}$"), (lambda k: lambda m, q, b: (200, new_content(k, b)))(kind)))
+
+        @r("PUT", V2 + r"/pages/(\d+)")
+        def update_page(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            p = pages.get(m.group(1))
+            if not p:
+                return missing("Page")
+            if b["version"]["number"] != p["version"]["number"] + 1:
+                return 409, {"message": f"Version must be incremented on update. Current Version: {p['version']['number']}", "statusCode": 409}
+            c["page_versions"].setdefault(m.group(1), {})[str(p["version"]["number"])] = p["body"]["storage"]["value"]
+            p["title"] = b["title"]
+            p["body"] = {"storage": {"value": b["body"]["value"]}}
+            p["version"] = {"number": b["version"]["number"], "createdAt": "2026-10-02T10:00:00.000Z", "message": b["version"].get("message")}
+            c["versions"][m.group(1)].insert(0, {"number": b["version"]["number"], "message": b["version"].get("message"), "authorId": "acc-ann", "createdAt": "2026-10-02T10:00:00.000Z"})
+            return 200, p
+
+        @r("DELETE", V2 + r"/pages/(\d+)")
+        def delete_page(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            if m.group(1) not in pages:
+                return missing("Page")
+            del pages[m.group(1)]
+            return 204, None
+
+        @r("POST", V2 + "/footer-comments")
+        def add_footer(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            cm = {"id": f"fc{nxt()}", "body": {"storage": {"value": b["body"]["value"]}}, "version": {"number": 1, "authorId": "acc-ann", "createdAt": "2026-10-01T10:00:00.000Z"}}
+            c["footer_comments"].setdefault(b["pageId"], []).append(cm)
+            return 200, cm
+
+        @r("POST", V2 + "/inline-comments")
+        def add_inline(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            cm = {"id": f"ic{nxt()}", "body": {"storage": {"value": b["body"]["value"]}}, "resolutionStatus": "open",
+                  "version": {"number": 1, "authorId": "acc-ann", "createdAt": "2026-10-01T10:00:00.000Z"}}
+            c["inline_comments"].setdefault(b["pageId"], []).append(cm)
+            return 200, cm
+
+        def comment_store(kind: str) -> dict[str, list[dict[str, Any]]]:
+            store: dict[str, list[dict[str, Any]]] = c["footer_comments"] if kind == "footer" else c["inline_comments"]
+            return store
+
+        def find_comment(kind: str, cid: str) -> dict[str, Any] | None:
+            for items in comment_store(kind).values():
+                for x in items:
+                    if x["id"] == cid:
+                        return x
+            return None
+
+        for kind in ("footer", "inline"):
+            def get_c(m: re.Match[str], q: dict[str, str], b: Any, kind: str = kind) -> tuple[int, Any]:
+                x = find_comment(kind, m.group(1))
+                return (200, x) if x else missing("Comment")
+
+            def put_c(m: re.Match[str], q: dict[str, str], b: Any, kind: str = kind) -> tuple[int, Any]:
+                x = find_comment(kind, m.group(1))
+                if not x:
+                    return missing("Comment")
+                x["body"] = {"storage": {"value": b["body"]["value"]}}
+                x["version"]["number"] = b["version"]["number"]
+                if "resolved" in b:
+                    x["resolutionStatus"] = "resolved" if b["resolved"] else "open"
+                return 200, x
+
+            def del_c(m: re.Match[str], q: dict[str, str], b: Any, kind: str = kind) -> tuple[int, Any]:
+                if not find_comment(kind, m.group(1)):
+                    return missing("Comment")
+                for k, items in comment_store(kind).items():
+                    comment_store(kind)[k] = [x for x in items if x["id"] != m.group(1)]
+                return 204, None
+
+            self.routes.append(("GET", re.compile(f"^{V2}/{kind}-comments/(\\w+)$"), get_c))
+            self.routes.append(("PUT", re.compile(f"^{V2}/{kind}-comments/(\\w+)$"), put_c))
+            self.routes.append(("DELETE", re.compile(f"^{V2}/{kind}-comments/(\\w+)$"), del_c))
+
+        @r("DELETE", V2 + r"/attachments/(\w+)")
+        def del_attachment(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            if m.group(1) not in c["attachment_content"]:
+                return missing("Attachment")
+            del c["attachment_content"][m.group(1)]
+            for k, v in c["attachments"].items():
+                c["attachments"][k] = [x for x in v if x["id"] != m.group(1)]
+            return 204, None
+
+        @r("POST", V2 + r"/pages/(\d+)/properties")
+        def add_prop(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            p = {"id": f"p{nxt()}", "key": b["key"], "value": b["value"], "version": {"number": 1}}
+            c["properties"].setdefault(m.group(1), []).append(p)
+            return 200, p
+
+        @r("PUT", V2 + r"/pages/(\d+)/properties/(\w+)")
+        def put_prop(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            for p in c["properties"].get(m.group(1), []):
+                if p["id"] == m.group(2):
+                    p["value"], p["version"] = b["value"], b["version"]
+                    return 200, p
+            return missing("Property")
+
+        @r("PUT", V2 + r"/tasks/(\w+)")
+        def put_task(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            for t in c["tasks"]:
+                if t["id"] == m.group(1):
+                    t["status"] = b["status"]
+                    return 200, t
+            return missing("Task")
+
+        # ---- Confluence v1 ----
+        @r("PUT", V1 + r"/content/(\d+)/move/(\w+)/(\d+)")
+        def move(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            p = pages.get(m.group(1))
+            if not p or m.group(3) not in pages:
+                return missing("Page")
+            p["parentId"] = m.group(3)
+            return 200, {"id": m.group(1)}
+
+        @r("POST", V1 + r"/content/(\d+)/copy")
+        def copy(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            src = pages.get(m.group(1))
+            if not src:
+                return missing("Page")
+            page = new_content("page", {"title": b.get("pageTitle") or f"Copy of {src['title']}", "spaceId": src["spaceId"], "parentId": b["destination"]["value"],
+                                        "body": {"value": src["body"]["storage"]["value"]}})
+            return 200, {"id": page["id"]}
+
+        @r("POST", V1 + "/content/archive")
+        def archive(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            for x in b["pages"]:
+                if x["id"] not in pages:
+                    return missing("Page")
+                pages[x["id"]]["status"] = "archived"
+            return 202, {"id": "task1"}
+
+        @r("POST", V1 + r"/content/(\d+)/version")
+        def restore(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            p = pages.get(m.group(1))
+            if not p:
+                return missing("Page")
+            html = c["page_versions"].get(m.group(1), {}).get(str(b["params"]["versionNumber"]))
+            if html is None:
+                return missing("Version")
+            p["body"] = {"storage": {"value": html}}
+            p["version"] = {"number": p["version"]["number"] + 1, "createdAt": "2026-10-02T10:00:00.000Z", "message": b["params"].get("message")}
+            return 200, {"id": m.group(1)}
+
+        @r("POST", V1 + r"/content/(\d+)/label")
+        def add_label(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            if m.group(1) not in pages:
+                return missing("Page")
+            labels = c["labels"].setdefault(m.group(1), [])
+            for x in b:
+                if x["name"] not in {lb["name"] for lb in labels}:
+                    labels.append({"id": str(nxt()), "name": x["name"], "prefix": x["prefix"]})
+            return 200, {"results": labels}
+
+        @r("DELETE", V1 + r"/content/(\d+)/label/(\w+)")
+        def del_label(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            c["labels"][m.group(1)] = [x for x in c["labels"].get(m.group(1), []) if x["name"] != m.group(2)]
+            return 204, None
+
+        @r("POST", V1 + r"/content/(\d+)/child/attachment")
+        def conf_attach(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            if m.group(1) not in pages:
+                return missing("Page")
+            fname, data = b["_multipart"]["file"]
+            att = {"id": f"cat{nxt()}", "title": fname, "mediaType": "text/plain", "fileSize": len(data), "pageId": m.group(1),
+                   "downloadLink": f"/download/attachments/{m.group(1)}/{fname}", "version": {"number": 1}}
+            c["attachments"].setdefault(m.group(1), []).append(att)
+            c["attachment_content"][att["id"]] = data
+            return 200, {"results": [{"id": att["id"], "title": fname, "extensions": {"mediaType": "text/plain", "fileSize": len(data)}}]}
+
+        @r("PUT", V1 + r"/content/(\d+)/restriction")
+        def restriction(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            if m.group(1) not in pages:
+                return missing("Page")
+            out = {}
+            for side in b:
+                out[side["operation"]] = {"operation": side["operation"], "restrictions": {
+                    "user": {"results": [{"accountId": u["accountId"], "displayName": u["accountId"]} for u in side["restrictions"]["user"]]},
+                    "group": {"results": [{"name": g["name"]} for g in side["restrictions"]["group"]]}}}
+            c["restrictions"][m.group(1)] = out
+            return 200, {"results": list(out.values())}
+
+        @r("POST", V1 + "/space")
+        def create_space(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            sp = {"id": str(nxt()), "key": b["key"], "name": b["name"], "type": "global", "status": "current"}
+            c["spaces"].append(sp)
+            return 200, {"key": b["key"]}
+
+        @r("POST", V1 + r"/user/watch/(content|space|label)/(\w+)")
+        def watch_conf(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            return 204, None
+
+        @r("DELETE", V1 + r"/user/watch/(content|space|label)/(\w+)")
+        def unwatch_conf(m: re.Match[str], q: dict[str, str], b: Any) -> tuple[int, Any]:
+            return 204, None

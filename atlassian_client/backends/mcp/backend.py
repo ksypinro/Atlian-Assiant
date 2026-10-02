@@ -122,12 +122,21 @@ OP_TOOLS: dict[str, str] = {
     "identity.whoami": "atlassianUserInfo", "identity.accessible_resources": "getAccessibleAtlassianResources",
 }
 
+def _all_op_tools() -> dict[str, str]:
+    from .write import WRITE_OP_TOOLS
+
+    return {**OP_TOOLS, **WRITE_OP_TOOLS}
+
+
 _STATUS_RE = re.compile(r"\b(400|401|403|404|409|422|429)\b")
 
 
 def unsupported(op: str, why: str = "the Atlassian MCP v2 catalog has no tool for it") -> UnsupportedOperationError:
     return UnsupportedOperationError(f"{op} is not available through MCP: {why}", operation=op,
                                      hint="Another backend (REST) can serve it; the router falls back automatically.")
+
+
+ALL_OP_TOOLS: dict[str, str] = {}
 
 
 class McpClient:
@@ -619,7 +628,7 @@ class McpGraph(McpClient):
                 for h in (data if isinstance(data, list) else data.get("results", []))][:limit]
 
     async def add_context(self, ari_or_url: str, context: Any) -> None:
-        raise unsupported("graph.context.add", "writes arrive in phase P2")
+        await self.raw("addTeamworkGraphContext", {"ariOrUrl": ari_or_url, "context": dict(context)}, op="graph.context.add")
 
 
 class McpIdentity(McpClient):
@@ -645,7 +654,12 @@ class McpBackend:
         self.transport, self.config = transport, config
         self.jira, self.agile, self.jsm = McpJira(transport, config), McpAgile(transport, config), McpJsm(transport, config)
         self.confluence, self.graph, self.identity = McpConfluence(transport, config), McpGraph(transport, config), McpIdentity(transport, config)
-        self._parts: tuple[McpClient, ...] = (self.jira, self.agile, self.jsm, self.confluence, self.graph, self.identity)
+        from .write import McpAgileWrite, McpConfluenceWrite, McpJiraWrite, McpJsmWrite
+
+        self.jira_write, self.agile_write, self.jsm_write = McpJiraWrite(transport, config), McpAgileWrite(transport, config), McpJsmWrite(transport, config)
+        self.confluence_write = McpConfluenceWrite(transport, config)
+        self._parts: tuple[McpClient, ...] = (self.jira, self.agile, self.jsm, self.confluence, self.graph, self.identity, self.jira_write,
+                                              self.agile_write, self.jsm_write, self.confluence_write)
         self._live: set[str] | None = None
 
     def implementation_for(self, protocol: type) -> object | None:
@@ -654,7 +668,7 @@ class McpBackend:
     def supported_operations(self) -> frozenset[str]:
         """Operations served by MCP tools. Narrowed to the live ``tools/list`` once a session has been opened."""
         live = self.jira._tools
-        return frozenset(op for op, tool in OP_TOOLS.items() if live is None or tool in live)
+        return frozenset(op for op, tool in ALL_OP_TOOLS.items() if live is None or tool in live)
 
     async def connect(self) -> frozenset[str]:
         """Open the session, learn which tools the admin enabled, and return the operations actually available."""
@@ -707,4 +721,5 @@ class McpBackendFactory:
         return McpBackend(SdkMcpTransport(url, headers), config)
 
 
-__all__ = ["OP_TOOLS", "McpBackend", "McpBackendFactory", "AtlassianError", "BackendUnavailableError", "ProjectRef"]
+ALL_OP_TOOLS.update(_all_op_tools())
+__all__ = ["ALL_OP_TOOLS", "OP_TOOLS", "McpBackend", "McpBackendFactory", "AtlassianError", "BackendUnavailableError", "ProjectRef"]

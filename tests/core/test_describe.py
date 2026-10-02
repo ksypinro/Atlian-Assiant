@@ -41,7 +41,7 @@ def test_help_returns_docstring_access_and_live_backends():
 
 def test_help_for_operation_without_curated_method_and_unknown():
     c = client()
-    assert "no curated facade method yet" in c.help("jira.issue.create")
+    assert "no curated facade method yet" in c.help("webhook.jira.dynamic.list")
     assert "Unknown operation" in c.help("jira.issue.gett") and "jira.issue" in c.help("jira.issue.gett")
     assert "Cloud only" in c.help("graph.context") and "credits" in c.help("graph.context")
 

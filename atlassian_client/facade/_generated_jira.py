@@ -7,10 +7,11 @@ from pathlib import Path
 from typing import Any, Literal, cast
 
 from ..capabilities import BackendKind
-from ..models.common import Page, UserRef
-from ..models.confluence import (Attachment, AttachmentContent, ConfluenceComment, Content, ContentDiff, ContentVersion, Label,
+from ..models.common import BodyInput, Page, UserRef
+from ..policy import PlannedAction
+from ..models.confluence import (ContentDraft, ContentUpdate, Attachment, AttachmentContent, ConfluenceComment, Content, ContentDiff, ContentVersion, Label,
                                  Permissions, Restrictions, SearchHit, Space, Task, Template)
-from ..models.jira import (Board, BoardConfig, ChangelogEntry, Comment, Component, Dashboard, Epic, Field, Filter, Issue, IssueLink,
+from ..models.jira import (CreatedIssue, IssueDraft, IssueUpdate, SprintChange, VersionChange, Workflow, Screen, Board, BoardConfig, ChangelogEntry, Comment, Component, Dashboard, Epic, Field, Filter, Issue, IssueLink,
                            IssueType, JqlParseResult, Project, RemoteLink, ServerInfo, Sprint, Status, Transition, Version, Worklog)
 from ..models.jira import Attachment as JiraAttachment
 from ..models.jira import AttachmentContent as JiraAttachmentContent
@@ -19,7 +20,9 @@ from ..models.graph import GraphContext, GraphObject, SemanticHit
 from ..models.webhooks import RawResponse
 from ..protocols import (ConfluenceContentReader, ConfluenceSearcher, ConfluenceSpaceReader, ConfluenceTemplateReader, JiraAgileReader,
                          JiraIssueReader, JiraIssueSearcher, JiraJqlTools, JiraMetadataReader, JiraProjectReader, JiraUserDirectory,
-                         JsmReader, RawRequester, SemanticSearcher, TeamworkGraphReader)
+                         JsmReader, RawRequester, SemanticSearcher, TeamworkGraphReader, JiraIssueWriter, JiraIssueDeleter, JiraProjectWriter,
+                         JiraAdmin, JiraAgileWriter, JsmWriter, ConfluenceContentWriter, ConfluenceSpaceWriter, ConfluencePermissionWriter,
+                         ConfluenceContentDeleter, TeamworkGraphWriter, ConfluenceSpecialContent)
 from ..protocols.confluence import BodyFormat, ContentType
 from ._namespace import Namespace
 
@@ -29,7 +32,7 @@ _List = list
 class JiraIssuesClient(Namespace):
     """Jira issues (work items): read, search and inspect."""
 
-    _OPS = {"jira.issue.get": "get", "jira.issue.search": "search", "jira.issue.count": "count", "jira.issue.comments.list": "comments", "jira.issue.changelog.list": "changelog", "jira.issue.worklogs.list": "worklogs", "jira.issue.transitions.list": "transitions", "jira.issue.links.list": "links", "jira.issue.remote_links.list": "remote_links", "jira.issue.attachments.list": "attachments", "jira.issue.attachment.download": "download_attachment", "jira.issue.watchers.list": "watchers", "jira.issue.property.get": "get_property"}
+    _OPS = {"jira.issue.get": "get", "jira.issue.search": "search", "jira.issue.count": "count", "jira.issue.comments.list": "comments", "jira.issue.changelog.list": "changelog", "jira.issue.worklogs.list": "worklogs", "jira.issue.transitions.list": "transitions", "jira.issue.links.list": "links", "jira.issue.remote_links.list": "remote_links", "jira.issue.attachments.list": "attachments", "jira.issue.attachment.download": "download_attachment", "jira.issue.watchers.list": "watchers", "jira.issue.property.get": "get_property", "jira.issue.create": "create", "jira.issue.bulk_create": "bulk_create", "jira.issue.edit": "edit", "jira.issue.assign": "assign", "jira.issue.transition": "transition", "jira.issue.comment.add": "add_comment", "jira.issue.comment.edit": "edit_comment", "jira.issue.worklog.add": "add_worklog", "jira.issue.link.create": "link", "jira.issue.remote_link.create": "add_remote_link", "jira.issue.attachment.upload": "upload_attachment", "jira.issue.watch": "watch", "jira.issue.property.set": "set_property", "jira.issue.hierarchy.convert": "convert_hierarchy", "jira.issue.delete": "delete", "jira.issue.comment.delete": "delete_comment", "jira.issue.attachment.delete": "delete_attachment"}
 
     async def get(self, key: str, *, fields: Sequence[str] | None = None, expand: Sequence[str] = (), backend: BackendKind | str | None = None) -> Issue:
         """Fetch one Jira issue by key or numeric id.
@@ -38,7 +41,7 @@ class JiraIssuesClient(Namespace):
                 You already know the issue key ("PROJ-123"). To find issues by criteria use `search` with JQL.
 
             Args:
-                key: Issue key such as "PROJ-123" (case-insensitive) or the numeric issue id.
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
                 fields: Fields to return. Human names ("Story Points") and ids ("customfield_10016") are both accepted. None returns the navigable defaults. Request only what you need in bulk jobs.
                 expand: Optional expansions, e.g. ("renderedFields", "changelog").
                 backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
@@ -113,7 +116,7 @@ class JiraIssuesClient(Namespace):
                 You need the discussion on one issue.
 
             Args:
-                key: Issue key such as "PROJ-123" (case-insensitive) or the numeric issue id.
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
                 limit: Maximum items in this page.
                 cursor: `next_cursor` from a previous page. Pass it back unchanged; never edit it.
                 backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
@@ -138,7 +141,7 @@ class JiraIssuesClient(Namespace):
                 You need to know who changed what and when.
 
             Args:
-                key: Issue key such as "PROJ-123" (case-insensitive) or the numeric issue id.
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
                 limit: Maximum items in this page.
                 cursor: `next_cursor` from a previous page. Pass it back unchanged; never edit it.
                 backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
@@ -163,7 +166,7 @@ class JiraIssuesClient(Namespace):
                 You need time-tracking details.
 
             Args:
-                key: Issue key such as "PROJ-123" (case-insensitive) or the numeric issue id.
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
                 limit: Maximum items in this page.
                 cursor: `next_cursor` from a previous page. Pass it back unchanged; never edit it.
                 backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
@@ -188,7 +191,7 @@ class JiraIssuesClient(Namespace):
                 Before transitioning an issue, to learn valid transition names.
 
             Args:
-                key: Issue key such as "PROJ-123" (case-insensitive) or the numeric issue id.
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
                 backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
 
             Returns:
@@ -211,7 +214,7 @@ class JiraIssuesClient(Namespace):
                 You need related issues.
 
             Args:
-                key: Issue key such as "PROJ-123" (case-insensitive) or the numeric issue id.
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
                 backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
 
             Returns:
@@ -234,7 +237,7 @@ class JiraIssuesClient(Namespace):
                 You need external references of an issue.
 
             Args:
-                key: Issue key such as "PROJ-123" (case-insensitive) or the numeric issue id.
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
                 backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
 
             Returns:
@@ -257,7 +260,7 @@ class JiraIssuesClient(Namespace):
                 Before downloading, to pick the attachment you need.
 
             Args:
-                key: Issue key such as "PROJ-123" (case-insensitive) or the numeric issue id.
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
                 backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
 
             Returns:
@@ -306,7 +309,7 @@ class JiraIssuesClient(Namespace):
                 You need to know who follows an issue.
 
             Args:
-                key: Issue key such as "PROJ-123" (case-insensitive) or the numeric issue id.
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
                 backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
 
             Returns:
@@ -329,7 +332,7 @@ class JiraIssuesClient(Namespace):
                 An app stored metadata on the issue.
 
             Args:
-                key: Issue key such as "PROJ-123" (case-insensitive) or the numeric issue id.
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
                 property_key: The property key.
                 backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
 
@@ -346,11 +349,463 @@ class JiraIssuesClient(Namespace):
         """
         return cast("Any", await self._call("jira.issue.property.get", JiraIssueReader, "get_property", key, property_key, backend=backend))
 
+    async def create(self, draft: IssueDraft, *, dry_run: bool = False, backend: BackendKind | str | None = None) -> CreatedIssue | PlannedAction:
+        """Create a Jira issue.
+
+            When to use:
+                The user asked you to create a ticket. Fetch valid issue types with `jira.metadata.issue_types` first.
+
+            Args:
+                draft: IssueDraft: project key, issue type, summary, optional Markdown description, assignee, labels, parent, extra fields by NAME or id.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                CreatedIssue
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jira.issues.create(IssueDraft(project="PROJ", issue_type="Bug", summary="Login fails"), dry_run=True)
+        """
+        return cast("CreatedIssue | PlannedAction", await self._call("jira.issue.create", JiraIssueWriter, "create_issue", draft, dry_run=dry_run, backend=backend))
+
+    async def bulk_create(self, drafts: Sequence[IssueDraft], *, dry_run: bool = False, backend: BackendKind | str | None = None) -> _List[CreatedIssue] | PlannedAction:
+        """Create up to 50 issues in one call.
+
+            When to use:
+                Creating many similar issues.
+
+            Args:
+                drafts: 1 to 50 IssueDraft objects.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                _List[CreatedIssue]
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jira.issues.bulk_create([IssueDraft(project="PROJ", issue_type="Task", summary="A")], dry_run=True)
+        """
+        return cast("_List[CreatedIssue] | PlannedAction", await self._call("jira.issue.bulk_create", JiraIssueWriter, "bulk_create_issues", drafts, dry_run=dry_run, backend=backend))
+
+    async def edit(self, key: str, update: IssueUpdate, *, notify_users: bool = True, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Edit an issue's summary, description, labels or fields.
+
+            When to use:
+                Changing existing issue data. To change status use `transition`.
+
+            Args:
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
+                update: The changes to apply.
+                notify_users: Send watcher notifications.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jira.issues.edit("PROJ-1", IssueUpdate(summary="New title"), dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("jira.issue.edit", JiraIssueWriter, "edit_issue", key, update, notify_users=notify_users, dry_run=dry_run, backend=backend))
+
+    async def assign(self, key: str, assignee: str | None, *, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Assign an issue to a person (or unassign).
+
+            When to use:
+                The user asks to assign or unassign.
+
+            Args:
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
+                assignee: accountId, email or display name (resolved), or None to unassign.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jira.issues.assign("PROJ-1", "ann@example.com", dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("jira.issue.assign", JiraIssueWriter, "assign_issue", key, assignee, dry_run=dry_run, backend=backend))
+
+    async def transition(self, key: str, transition: str, *, fields: dict[str, Any] | None = None, comment: BodyInput | str | None = None, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Move an issue through its workflow (e.g. to Done).
+
+            When to use:
+                The user asks to change an issue's status. List options with `transitions` first.
+
+            Args:
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
+                transition: Transition name or id (see `jira.issues.transitions`).
+                fields: Fields required by the transition screen (names or ids).
+                comment: Optional Markdown comment added with the transition.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jira.issues.transition("PROJ-1", "Done", dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("jira.issue.transition", JiraIssueWriter, "transition_issue", key, transition, fields=fields, comment=comment, dry_run=dry_run, backend=backend))
+
+    async def add_comment(self, key: str, body: BodyInput | str, *, visibility: dict[str, str] | None = None, dry_run: bool = False, backend: BackendKind | str | None = None) -> Comment | PlannedAction:
+        """Add a comment to an issue.
+
+            When to use:
+                The user asks you to comment.
+
+            Args:
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
+                body: Text as Markdown (default), or a BodyInput for ADF / storage / plain.
+                visibility: Restrict to a role/group, e.g. {"type": "role", "value": "Developers"}.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                Comment
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jira.issues.add_comment("PROJ-1", "Looking into it", dry_run=True)
+        """
+        return cast("Comment | PlannedAction", await self._call("jira.issue.comment.add", JiraIssueWriter, "add_comment", key, body, visibility=visibility, dry_run=dry_run, backend=backend))
+
+    async def edit_comment(self, key: str, comment_id: str, body: BodyInput | str, *, dry_run: bool = False, backend: BackendKind | str | None = None) -> Comment | PlannedAction:
+        """Edit an existing comment.
+
+            When to use:
+                Correcting your own earlier comment.
+
+            Args:
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
+                comment_id: Comment id.
+                body: Text as Markdown (default), or a BodyInput for ADF / storage / plain.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                Comment
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jira.issues.edit_comment("PROJ-1", "10000", "fixed", dry_run=True)
+        """
+        return cast("Comment | PlannedAction", await self._call("jira.issue.comment.edit", JiraIssueWriter, "edit_comment", key, comment_id, body, dry_run=dry_run, backend=backend))
+
+    async def add_worklog(self, key: str, time_spent: str, *, started: str | None = None, comment: BodyInput | str | None = None, dry_run: bool = False, backend: BackendKind | str | None = None) -> Worklog | PlannedAction:
+        """Log time on an issue.
+
+            When to use:
+                The user asks to log work.
+
+            Args:
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
+                time_spent: Jira duration, e.g. "2h 30m".
+                started: ISO-8601 start time; default now.
+                comment: Optional Markdown comment.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                Worklog
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jira.issues.add_worklog("PROJ-1", "2h", dry_run=True)
+        """
+        return cast("Worklog | PlannedAction", await self._call("jira.issue.worklog.add", JiraIssueWriter, "add_worklog", key, time_spent, started=started, comment=comment, dry_run=dry_run, backend=backend))
+
+    async def link(self, link_type: str, inward_key: str, outward_key: str, *, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Link two issues.
+
+            When to use:
+                The user asks to relate/block/duplicate issues.
+
+            Args:
+                link_type: Link type name (see `jira.metadata.link_types`).
+                inward_key: Issue key on the inward side.
+                outward_key: Issue key on the outward side.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jira.issues.link("Blocks", "PROJ-1", "PROJ-2", dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("jira.issue.link.create", JiraIssueWriter, "create_link", link_type, inward_key, outward_key, dry_run=dry_run, backend=backend))
+
+    async def add_remote_link(self, key: str, url: str, title: str, *, dry_run: bool = False, backend: BackendKind | str | None = None) -> RemoteLink | PlannedAction:
+        """Attach a web link to an issue.
+
+            When to use:
+                Referencing an external page.
+
+            Args:
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
+                url: URL.
+                title: Title.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                RemoteLink
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jira.issues.add_remote_link("PROJ-1", "https://example.com", "Doc", dry_run=True)
+        """
+        return cast("RemoteLink | PlannedAction", await self._call("jira.issue.remote_link.create", JiraIssueWriter, "create_remote_link", key, url, title, dry_run=dry_run, backend=backend))
+
+    async def upload_attachment(self, key: str, file: Path | bytes, *, filename: str | None = None, dry_run: bool = False, backend: BackendKind | str | None = None) -> _List[JiraAttachment] | PlannedAction:
+        """Upload a file to an issue.
+
+            When to use:
+                The user asks to attach a file.
+
+            Args:
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
+                file: File path or raw bytes.
+                filename: File name to store (defaults to the path's name).
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                _List[JiraAttachment]
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jira.issues.upload_attachment("PROJ-1", b"data", filename="a.txt", dry_run=True)
+        """
+        return cast("_List[JiraAttachment] | PlannedAction", await self._call("jira.issue.attachment.upload", JiraIssueWriter, "upload_attachment", key, file, filename=filename, dry_run=dry_run, backend=backend))
+
+    async def watch(self, key: str, *, watch: bool = True, account_id: str | None = None, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Start or stop watching an issue.
+
+            When to use:
+                The user wants notifications for an issue.
+
+            Args:
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
+                watch: True to watch, False to stop.
+                account_id: Atlassian accountId.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jira.issues.watch("PROJ-1", dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("jira.issue.watch", JiraIssueWriter, "watch_issue", key, watch=watch, account_id=account_id, dry_run=dry_run, backend=backend))
+
+    async def set_property(self, key: str, property_key: str, value: Any, *, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Set an app-defined JSON property on an issue.
+
+            When to use:
+                Storing app metadata on an issue.
+
+            Args:
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
+                property_key: Property key.
+                value: JSON-serializable value.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jira.issues.set_property("PROJ-1", "my.app", {"a": 1}, dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("jira.issue.property.set", JiraIssueWriter, "set_property", key, property_key, value, dry_run=dry_run, backend=backend))
+
+    async def convert_hierarchy(self, key: str, *, new_issue_type: str, new_parent: str | None = None, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Change an issue's hierarchy level (MCP only).
+
+            When to use:
+                Turning a task into a sub-task or epic.
+
+            Args:
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
+                new_issue_type: Target issue type name.
+                new_parent: New parent key, if any.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jira.issues.convert_hierarchy("PROJ-1", new_issue_type="Epic", dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("jira.issue.hierarchy.convert", JiraIssueWriter, "convert_hierarchy", key, new_issue_type=new_issue_type, new_parent=new_parent, dry_run=dry_run, backend=backend))
+
+    async def delete(self, key: str, *, delete_subtasks: bool = False, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Permanently delete an issue.
+
+            When to use:
+                ONLY when the user explicitly asks to delete. Prefer transitioning to Done/Closed.
+
+            Args:
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
+                delete_subtasks: Also delete sub-tasks.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: DELETE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jira.issues.delete("PROJ-1", dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("jira.issue.delete", JiraIssueDeleter, "delete_issue", key, delete_subtasks=delete_subtasks, dry_run=dry_run, backend=backend))
+
+    async def delete_comment(self, key: str, comment_id: str, *, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Delete a comment.
+
+            When to use:
+                The user asks to remove a comment.
+
+            Args:
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
+                comment_id: Comment id.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: DELETE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jira.issues.delete_comment("PROJ-1", "10000", dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("jira.issue.comment.delete", JiraIssueDeleter, "delete_comment", key, comment_id, dry_run=dry_run, backend=backend))
+
+    async def delete_attachment(self, attachment_id: str, *, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Delete an attachment.
+
+            When to use:
+                The user asks to remove a file.
+
+            Args:
+                attachment_id: Attachment id.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: DELETE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jira.issues.delete_attachment("att1", dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("jira.issue.attachment.delete", JiraIssueDeleter, "delete_attachment", attachment_id, dry_run=dry_run, backend=backend))
+
 
 class JiraProjectsClient(Namespace):
     """Jira projects, components and versions."""
 
-    _OPS = {"jira.project.list": "list", "jira.project.get": "get", "jira.project.components.list": "components", "jira.project.versions.list": "versions"}
+    _OPS = {"jira.project.list": "list", "jira.project.get": "get", "jira.project.components.list": "components", "jira.project.versions.list": "versions", "jira.project.version.manage": "manage_version", "jira.project.create": "create", "jira.project.update": "update"}
 
     async def list(self, *, query: str | None = None, limit: int = 50, cursor: str | None = None, backend: BackendKind | str | None = None) -> Page[Project]:
         """List or search projects you can see.
@@ -445,6 +900,86 @@ class JiraProjectsClient(Namespace):
                 >>> vs = await client.jira.projects.versions("PROJ")
         """
         return cast("_List[Version]", await self._call("jira.project.versions.list", JiraProjectReader, "list_versions", project, backend=backend))
+
+    async def manage_version(self, project: str, change: VersionChange, *, dry_run: bool = False, backend: BackendKind | str | None = None) -> Version | PlannedAction:
+        """Create, update, release, archive or delete a project version.
+
+            When to use:
+                Release management.
+
+            Args:
+                project: Project key such as "PROJ".
+                change: The change to apply.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                Version
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jira.projects.manage_version("PROJ", VersionChange(action="create", name="2.0"), dry_run=True)
+        """
+        return cast("Version | PlannedAction", await self._call("jira.project.version.manage", JiraProjectWriter, "manage_version", project, change, dry_run=dry_run, backend=backend))
+
+    async def create(self, key: str, name: str, *, template: str, lead: str, dry_run: bool = False, backend: BackendKind | str | None = None) -> Project | PlannedAction:
+        """Create a project (MANAGE access).
+
+            When to use:
+                The user asks for a new project and an admin enabled MANAGE.
+
+            Args:
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
+                name: Name.
+                template: Project template key.
+                lead: Project lead (accountId, email or name).
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                Project
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: MANAGE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jira.projects.create("NEW", "New project", template="com.pyxis.greenhopper.jira:gh-simplified-agility-scrum", lead="ann@example.com", dry_run=True)
+        """
+        return cast("Project | PlannedAction", await self._call("jira.project.create", JiraAdmin, "create_project", key, name, template=template, lead=lead, dry_run=dry_run, backend=backend))
+
+    async def update(self, key: str, changes: dict[str, Any], *, dry_run: bool = False, backend: BackendKind | str | None = None) -> Project | PlannedAction:
+        """Update project settings (MANAGE access).
+
+            When to use:
+                Renaming or reconfiguring a project.
+
+            Args:
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
+                changes: Project fields to change.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                Project
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: MANAGE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jira.projects.update("PROJ", {"name": "Renamed"}, dry_run=True)
+        """
+        return cast("Project | PlannedAction", await self._call("jira.project.update", JiraAdmin, "update_project", key, **changes, dry_run=dry_run, backend=backend))
 
 
 class JiraMetadataClient(Namespace):
@@ -924,4 +1459,105 @@ class JiraExpressionsClient(Namespace):
                 >>> v = await client.jira.expressions.evaluate("1 + 1", {})
         """
         return cast("Any", await self._call("jira.expression.evaluate", JiraJqlTools, "evaluate_expression", expression, context, backend=backend))
+
+
+class JiraAdminClient(Namespace):
+    """Jira administration (MANAGE access; disabled by default)."""
+
+    _OPS = {"jira.admin.workflows.list": "workflows", "jira.admin.workflow.editor_link": "workflow_editor_link", "jira.admin.screen.get": "screen", "jira.admin.screen.update": "update_screen"}
+
+    async def workflows(self, *, project: str | None = None, backend: BackendKind | str | None = None) -> _List[Workflow]:
+        """List workflows.
+
+            When to use:
+                Understanding statuses and transitions.
+
+            Args:
+                project: Project key such as "PROJ".
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                _List[Workflow]
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+
+            Access: READ
+
+            Example:
+                >>> ws = await client.jira.admin.workflows()
+        """
+        return cast("_List[Workflow]", await self._call("jira.admin.workflows.list", JiraAdmin, "list_workflows", project=project, backend=backend))
+
+    async def workflow_editor_link(self, workflow_id: str, *, backend: BackendKind | str | None = None) -> str:
+        """URL of the workflow editor.
+
+            When to use:
+                The user wants to edit a workflow in the UI.
+
+            Args:
+                workflow_id: Workflow id.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                str
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+
+            Access: READ
+
+            Example:
+                >>> u = await client.jira.admin.workflow_editor_link("wf1")
+        """
+        return cast("str", await self._call("jira.admin.workflow.editor_link", JiraAdmin, "get_workflow_editor_link", workflow_id, backend=backend))
+
+    async def screen(self, screen_id: str, *, backend: BackendKind | str | None = None) -> Screen:
+        """Fetch a screen.
+
+            When to use:
+                Inspecting field layout.
+
+            Args:
+                screen_id: Screen id.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                Screen
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+
+            Access: READ
+
+            Example:
+                >>> sc = await client.jira.admin.screen("1")
+        """
+        return cast("Screen", await self._call("jira.admin.screen.get", JiraAdmin, "get_screen", screen_id, backend=backend))
+
+    async def update_screen(self, screen_id: str, changes: dict[str, Any], *, dry_run: bool = False, backend: BackendKind | str | None = None) -> Screen | PlannedAction:
+        """Update a screen (MANAGE access).
+
+            When to use:
+                Changing field layout.
+
+            Args:
+                screen_id: Screen id.
+                changes: Screen fields to change.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                Screen
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: MANAGE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jira.admin.update_screen("1", {"name": "Renamed"}, dry_run=True)
+        """
+        return cast("Screen | PlannedAction", await self._call("jira.admin.screen.update", JiraAdmin, "update_screen", screen_id, **changes, dry_run=dry_run, backend=backend))
 

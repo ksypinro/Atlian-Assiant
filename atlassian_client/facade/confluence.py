@@ -14,7 +14,9 @@ from ._generated_confluence import (
     ConfluenceLabelsClient,
     ConfluencePermissionsClient,
     ConfluencePropertiesClient,
+    ConfluenceSocialClient,
     ConfluenceSpacesClient,
+    ConfluenceSpecialClient,
     ConfluenceTasksClient,
     ConfluenceTemplatesClient,
 )
@@ -145,6 +147,6 @@ class ConfluenceClient(Namespace):
         self.tasks = ConfluenceTasksClient(router)
         self.permissions = ConfluencePermissionsClient(router)
         self.templates = ConfluenceTemplatesClient(router)
-        self.social: Any = Unavailable("confluence.social", "P2")
-        self.special: Any = Unavailable("confluence.special (MCP-only features)", "P1")
+        self.social = ConfluenceSocialClient(router)
+        self.special = ConfluenceSpecialClient(router)
         self.api: Any = Unavailable("confluence.api (generated REST tier)", "P6")

@@ -7,10 +7,11 @@ from pathlib import Path
 from typing import Any, Literal, cast
 
 from ..capabilities import BackendKind
-from ..models.common import Page, UserRef
-from ..models.confluence import (Attachment, AttachmentContent, ConfluenceComment, Content, ContentDiff, ContentVersion, Label,
+from ..models.common import BodyInput, Page, UserRef
+from ..policy import PlannedAction
+from ..models.confluence import (ContentDraft, ContentUpdate, Attachment, AttachmentContent, ConfluenceComment, Content, ContentDiff, ContentVersion, Label,
                                  Permissions, Restrictions, SearchHit, Space, Task, Template)
-from ..models.jira import (Board, BoardConfig, ChangelogEntry, Comment, Component, Dashboard, Epic, Field, Filter, Issue, IssueLink,
+from ..models.jira import (CreatedIssue, IssueDraft, IssueUpdate, SprintChange, VersionChange, Workflow, Screen, Board, BoardConfig, ChangelogEntry, Comment, Component, Dashboard, Epic, Field, Filter, Issue, IssueLink,
                            IssueType, JqlParseResult, Project, RemoteLink, ServerInfo, Sprint, Status, Transition, Version, Worklog)
 from ..models.jira import Attachment as JiraAttachment
 from ..models.jira import AttachmentContent as JiraAttachmentContent
@@ -19,7 +20,9 @@ from ..models.graph import GraphContext, GraphObject, SemanticHit
 from ..models.webhooks import RawResponse
 from ..protocols import (ConfluenceContentReader, ConfluenceSearcher, ConfluenceSpaceReader, ConfluenceTemplateReader, JiraAgileReader,
                          JiraIssueReader, JiraIssueSearcher, JiraJqlTools, JiraMetadataReader, JiraProjectReader, JiraUserDirectory,
-                         JsmReader, RawRequester, SemanticSearcher, TeamworkGraphReader)
+                         JsmReader, RawRequester, SemanticSearcher, TeamworkGraphReader, JiraIssueWriter, JiraIssueDeleter, JiraProjectWriter,
+                         JiraAdmin, JiraAgileWriter, JsmWriter, ConfluenceContentWriter, ConfluenceSpaceWriter, ConfluencePermissionWriter,
+                         ConfluenceContentDeleter, TeamworkGraphWriter, ConfluenceSpecialContent)
 from ..protocols.confluence import BodyFormat, ContentType
 from ._namespace import Namespace
 

@@ -83,6 +83,8 @@ _NOT_ISSUE_KEY = {"jira.issue.search", "jira.issue.count", "jira.issue.create", 
 #: operations addressed by ids that carry no project, so project scope cannot be verified before the call
 _ID_ONLY_JIRA = {"jira.issue.attachment.download", "jira.issue.attachment.delete"}
 _SPACE_BY_ID_PREFIX = "confluence."
+#: destructive access classes are ALWAYS confirmed, even if a policy lists nothing in ``confirm`` (design 17: destructive actions)
+_ALWAYS_CONFIRM = frozenset({Access.DELETE, Access.MANAGE})
 _ATTACHMENT_DOWNLOADS = {"jira.issue.attachment.download", "confluence.attachment.download"}
 
 #: Atlassian MCP v2 permission-group scopes mirrored by ``Access`` (design 9-11). Request only what the policy allows.
@@ -154,20 +156,18 @@ class PolicyGuard:
                                     hint="The session is pinned to other Atlassian sites.")
         args = self._scope(op, args, kwargs)
         self._clamp(op, kwargs)
-        plan = None
         dry_run = bool(kwargs.pop("dry_run", False))
-        if op.access in p.confirm:
+        if op.access in (Access.WRITE, Access.DELETE, Access.MANAGE):
             plan = self._plan(op, args, kwargs)
             if dry_run:
-                return GuardDecision(args, kwargs, plan)
-            if self.confirm is None:
-                raise ConfirmationDeclinedError(f"{op.id} needs confirmation but no ConfirmationHandler is configured", operation=op.id,
-                                                hint=f"Call with dry_run=True to preview, or configure a handler. Plan: {plan.summary}")
-            if not await self.confirm.confirm(plan):
-                raise ConfirmationDeclinedError(f"the user declined: {plan.summary}", operation=op.id,
-                                                hint="Do not retry the same action; ask the user what they want instead.")
-        elif dry_run:
-            kwargs["dry_run"] = False                    # read operations ignore dry_run
+                return GuardDecision(args, kwargs, plan)             # report what WOULD happen; send nothing
+            if op.access in p.confirm or op.access in _ALWAYS_CONFIRM:
+                if self.confirm is None:
+                    raise ConfirmationDeclinedError(f"{op.id} needs confirmation but no ConfirmationHandler is configured", operation=op.id,
+                                                    hint=f"Call with dry_run=True to preview, or configure a handler. Plan: {plan.summary}")
+                if not await self.confirm.confirm(plan):
+                    raise ConfirmationDeclinedError(f"the user declined: {plan.summary}", operation=op.id,
+                                                    hint="Do not retry the same action; ask the user what they want instead.")
         return GuardDecision(args, kwargs, None)
 
     # ---- helpers ----

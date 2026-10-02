@@ -10,12 +10,15 @@ import json
 from collections.abc import Callable
 from typing import Any
 
-from ..backends.mcp.backend import OP_TOOLS
+from ..backends.mcp.backend import ALL_OP_TOOLS
 from ..backends.mcp.session import McpToolResult
 from .scenario import scenario
 
 CLOUD_ID = "cloud-1"
-ALL_TOOLS = frozenset(OP_TOOLS.values())
+from ..backends.mcp.write import PAIRED_TOOLS  # noqa: E402
+
+ALL_TOOLS = frozenset(ALL_OP_TOOLS.values()) | PAIRED_TOOLS
+WRITE_TOOLS = ALL_TOOLS - frozenset(t for o, t in __import__('atlassian_client.backends.mcp.backend', fromlist=['OP_TOOLS']).OP_TOOLS.items())
 
 
 def _off(items: list[Any], a: dict[str, Any], key: str) -> dict[str, Any]:
@@ -64,11 +67,10 @@ class FakeMcpTransport:
 
     def _build(self) -> None:
         j, a, c = self.raw["jira"], self.raw["agile"], self.raw["confluence"]
-        issues = {i["key"]: i for i in j["issues"]}
         pages = c["pages"]
 
         def issue(args: dict[str, Any]) -> dict[str, Any]:
-            i = issues.get(str(args["issueIdOrKey"]).upper())
+            i = next((x for x in j["issues"] if x["key"] == str(args["issueIdOrKey"]).upper()), None)
             if not i:
                 raise ToolError("404 Not Found: issue does not exist or you do not have permission")
             out: dict[str, Any] = json.loads(json.dumps(i))
@@ -99,7 +101,7 @@ class FakeMcpTransport:
 
         def issue_items(store: dict[str, Any], args: dict[str, Any]) -> list[Any]:
             key = str(args["issueIdOrKey"]).upper()
-            if key not in issues:
+            if not any(x["key"] == key for x in j["issues"]):
                 raise ToolError("404 Not Found: issue does not exist or you do not have permission")
             items: list[Any] = store.get(key, [])
             return items
@@ -236,3 +238,377 @@ class FakeMcpTransport:
         h["search"] = lambda x: {"results": [{"title": "Runbook", "url": "https://example.atlassian.net/wiki/spaces/ENG/pages/123", "product": "confluence", "snippet": x["query"], "score": 0.9}][: int(x.get("limit", 20))]}
         h["atlassianUserInfo"] = lambda x: {"account_id": j["myself"]["accountId"], "name": j["myself"]["displayName"], "email": j["myself"]["emailAddress"]}
         h["getAccessibleAtlassianResources"] = lambda x: [{"id": CLOUD_ID, "name": "Example", "url": "https://example.atlassian.net", "scopes": ["read:jira:agent-interface"]}]
+        self._build_writes()
+
+    def _build_writes(self) -> None:
+        j, a, c = self.raw["jira"], self.raw["agile"], self.raw["confluence"]
+        h = self.handlers
+        n = {"v": 7000}
+        me = j["myself"]
+
+        def nxt() -> int:
+            n["v"] += 1
+            return n["v"]
+
+        def find(key: str) -> dict[str, Any]:
+            found: dict[str, Any] | None = next((i for i in j["issues"] if i["key"] == str(key).upper()), None)
+            if found is None:
+                raise ToolError("404 Not Found: issue does not exist or you do not have permission")
+            return found
+
+        def create_issue(x: dict[str, Any]) -> dict[str, Any]:
+            if not str(x.get("summary", "")).strip():
+                raise ToolError("400 Bad Request: summary is required")
+            proj = next((p for p in j["projects"] if p["key"] == x["projectKey"]), {"id": "9", "key": x["projectKey"], "name": ""})
+            num = nxt()
+            user = next((u for u in j["users"] if u["accountId"] == x.get("assignee_account_id")), None)
+            issue: dict[str, Any] = {"id": str(10000 + num), "key": f"{proj['key']}-{num}", "fields": {
+                "summary": x["summary"], "status": {"id": "1", "name": "To Do", "statusCategory": {"name": "To Do"}}, "issuetype": {"name": x["issueTypeName"]},
+                "project": {"id": proj["id"], "key": proj["key"], "name": proj.get("name")}, "assignee": user, "reporter": me, "labels": list(x.get("labels") or []),
+                "description": None, "attachment": [], "issuelinks": [], "created": "2026-10-01T10:00:00.000+0000", "updated": "2026-10-01T10:00:00.000+0000"}}
+            if x.get("description"):
+                from ..formats.adf import markdown_to_adf
+
+                issue["fields"]["description"] = markdown_to_adf(x["description"])
+            j["issues"].append(issue)
+            return {"id": issue["id"], "key": issue["key"]}
+
+        def edit_issue(x: dict[str, Any]) -> dict[str, Any]:
+            issue = find(x["issueIdOrKey"])
+            fields = dict(x["fields"])
+            if "description" in fields and isinstance(fields["description"], str):
+                from ..formats.adf import markdown_to_adf
+
+                fields["description"] = markdown_to_adf(fields["description"])
+            if "assignee" in fields and fields["assignee"]:
+                fields["assignee"] = next((u for u in j["users"] if u["accountId"] == fields["assignee"]["accountId"]), None)
+            issue["fields"].update(fields)
+            return {"ok": True}
+
+        def transition(x: dict[str, Any]) -> dict[str, Any]:
+            issue = find(x["issueIdOrKey"])
+            t = next((t for t in j["transitions"].get(issue["key"], []) if t["id"] == x["transition"]["id"]), None)
+            if not t:
+                raise ToolError("400 Bad Request: invalid transition")
+            issue["fields"]["status"] = t["to"]
+            if x.get("commentBody"):
+                from ..formats.adf import markdown_to_adf
+
+                j["comments"].setdefault(issue["key"], []).append({"id": f"c{nxt()}", "author": me, "body": markdown_to_adf(x["commentBody"]), "created": "2026-10-01T10:00:00.000+0000"})
+            return {"ok": True}
+
+        def comment(x: dict[str, Any]) -> dict[str, Any]:
+            from ..formats.adf import markdown_to_adf
+
+            issue = find(x["issueIdOrKey"])
+            items = j["comments"].setdefault(issue["key"], [])
+            if x.get("commentId"):
+                existing = next((c0 for c0 in items if c0["id"] == x["commentId"]), None)
+                if not existing:
+                    raise ToolError("404 Not Found: comment")
+                existing["body"] = markdown_to_adf(x["commentBody"])
+                return existing  # type: ignore[no-any-return]
+            cm = {"id": f"c{nxt()}", "author": me, "body": markdown_to_adf(x["commentBody"]), "created": "2026-10-01T10:00:00.000+0000", "updated": "2026-10-01T10:00:00.000+0000"}
+            items.append(cm)
+            return cm
+
+        def worklog(x: dict[str, Any]) -> dict[str, Any]:
+            issue = find(x["issueIdOrKey"])
+            w = {"id": f"w{nxt()}", "author": me, "timeSpent": x["timeSpent"], "timeSpentSeconds": 3600, "started": x.get("started") or "2026-10-01T09:00:00.000+0000"}
+            j["worklogs"].setdefault(issue["key"], []).append(w)
+            return w
+
+        def link(x: dict[str, Any]) -> dict[str, Any]:
+            inward, outward = find(x["inwardIssue"]), find(x["outwardIssue"])
+            inward["fields"]["issuelinks"].append({"id": f"l{nxt()}", "type": {"name": x["type"], "outward": x["type"].lower()}, "outwardIssue": {"key": outward["key"], "fields": {}}})
+            return {"ok": True}
+
+        def remote(x: dict[str, Any]) -> dict[str, Any]:
+            issue = find(x["issueIdOrKey"])
+            rl = {"id": nxt(), "object": {"url": x["url"], "title": x["title"]}}
+            j["remote_links"].setdefault(issue["key"], []).append(rl)
+            return rl
+
+        def upload(x: dict[str, Any]) -> list[dict[str, Any]]:
+            issue = find(x["issueIdOrKey"])
+            data = base64.b64decode(x["contentBase64"])
+            att = {"id": f"att{nxt()}", "filename": x["filename"], "size": len(data), "mimeType": "text/plain", "author": me}
+            issue["fields"]["attachment"].append(att)
+            j["attachment_content"][att["id"]] = data
+            return [att]
+
+        def watch(x: dict[str, Any]) -> dict[str, Any]:
+            issue = find(x["issueIdOrKey"])
+            w = j["watchers"].setdefault(issue["key"], [])
+            user = next((u for u in j["users"] if u["accountId"] == (x.get("accountId") or me["accountId"])), me)
+            if x["watch"] and user not in w:
+                w.append(user)
+            if not x["watch"]:
+                j["watchers"][issue["key"]] = [u for u in w if u["accountId"] != user["accountId"]]
+            return {"ok": True}
+
+        def prop(x: dict[str, Any]) -> dict[str, Any]:
+            find(x["entityIdOrKey"])
+            j["properties"].setdefault(str(x["entityIdOrKey"]).upper(), {})[x["propertyKey"]] = {"key": x["propertyKey"], "value": x["value"]}
+            return {"ok": True}
+
+        def delete_issue(x: dict[str, Any]) -> dict[str, Any]:
+            find(x["issueIdOrKey"])
+            j["issues"] = [i for i in j["issues"] if i["key"] != str(x["issueIdOrKey"]).upper()]
+            return {"ok": True}
+
+        def delete_comment(x: dict[str, Any]) -> dict[str, Any]:
+            items = j["comments"].get(str(x["issueIdOrKey"]).upper(), [])
+            if not any(c0["id"] == x["commentId"] for c0 in items):
+                raise ToolError("404 Not Found: comment")
+            j["comments"][str(x["issueIdOrKey"]).upper()] = [c0 for c0 in items if c0["id"] != x["commentId"]]
+            return {"ok": True}
+
+        def delete_attachment(x: dict[str, Any]) -> dict[str, Any]:
+            if x["attachmentId"] not in j["attachment_content"]:
+                raise ToolError("404 Not Found: attachment")
+            del j["attachment_content"][x["attachmentId"]]
+            for i in j["issues"]:
+                i["fields"]["attachment"] = [at for at in i["fields"].get("attachment", []) if at["id"] != x["attachmentId"]]
+            return {"ok": True}
+
+        def version(x: dict[str, Any]) -> dict[str, Any]:
+            versions = j["versions"].setdefault(x["projectIdOrKey"], [])
+            if x["action"] == "create":
+                v = {"id": f"v{nxt()}", "name": x["name"], "released": False}
+                versions.append(v)
+                return v
+            v2: dict[str, Any] | None = next((v for v in versions if v["id"] == x.get("versionId")), None)
+            if not v2:
+                raise ToolError("404 Not Found: version")
+            if x["action"] == "delete":
+                versions.remove(v2)
+            elif x["action"] == "release":
+                v2["released"] = True
+            return v2
+
+        def create_project(x: dict[str, Any]) -> dict[str, Any]:
+            p = {"id": str(nxt()), "key": x["key"], "name": x["name"], "projectTypeKey": "software"}
+            j["projects"].append(p)
+            return p
+
+        def update_project(x: dict[str, Any]) -> dict[str, Any]:
+            p = next((p for p in j["projects"] if p["key"] == x["projectIdOrKey"]), None)
+            if not p:
+                raise ToolError("404 Not Found: project")
+            p.update({k: v for k, v in x.items() if k not in ("cloudId", "projectIdOrKey")})
+            return p  # type: ignore[no-any-return]
+
+        def sprint(x: dict[str, Any]) -> dict[str, Any]:
+            act = x["action"]
+            if act == "create":
+                sp = {"id": nxt(), "name": x["name"], "state": "future", "goal": x.get("goal")}
+                a["sprints"].setdefault(str(x["boardId"]), []).append(sp)
+                return sp
+            if act in ("move_issues", "move_to_backlog", "rank"):
+                if act == "move_issues":
+                    a["sprint_issues"].setdefault(str(x["sprintId"]), []).extend(find(k) for k in x["issues"])
+                return {"ok": True}
+            for v in a["sprints"].values():
+                for sp in v:
+                    if sp["id"] == x["sprintId"]:
+                        if act == "delete":
+                            v.remove(sp)
+                            return {**sp, "state": "deleted"}
+                        sp["state"] = {"start": "active", "close": "closed"}.get(act, sp["state"])
+                        return sp  # type: ignore[no-any-return]
+            raise ToolError("404 Not Found: sprint")
+
+        def board(x: dict[str, Any]) -> dict[str, Any]:
+            b = {"id": nxt(), "name": x["name"], "type": x["type"]}
+            a["boards"].append(b)
+            return b
+
+        h["createJiraIssue"] = create_issue
+        h["editJiraIssue"] = edit_issue
+        h["transitionJiraIssue"] = transition
+        h["addOrEditJiraIssueComment"] = comment
+        h["addOrEditJiraIssueWorklog"] = worklog
+        h["createJiraIssueLink"] = link
+        h["createJiraIssueRemoteIssueLink"] = remote
+        h["uploadAttachmentToJiraIssue"] = upload
+        h["watchJiraIssue"] = watch
+        h["editJiraEntityProperty"] = prop
+        h["convertJiraIssueHierarchy"] = lambda x: (find(x["issueIdOrKey"])["fields"].update({"issuetype": {"name": x["newIssueType"]}}) or {"ok": True})
+        h["deleteJiraIssue"] = delete_issue
+        h["deleteJiraComment"] = delete_comment
+        h["deleteJiraIssueAttachment"] = delete_attachment
+        h["manageJiraProjectVersion"] = version
+        h["createJiraProject"] = create_project
+        h["updateJiraProject"] = update_project
+        h["getJiraWorkflows"] = lambda x: {"workflows": [{"id": "wf1", "name": "Software workflow", "statuses": ["To Do", "Done"]}]}
+        h["getJiraWorkflowEditorLink"] = lambda x: {"url": f"https://example.atlassian.net/jira/settings/issues/workflows/{x['workflowId']}"}
+        h["getJiraScreen"] = lambda x: {"id": x["screenId"], "name": "Default screen"}
+        h["updateJiraScreen"] = lambda x: {"id": x["screenId"], "name": x.get("name", "Default screen")}
+        h["manageJiraSprint"] = sprint
+        h["createJiraBoard"] = board
+
+        # ---- Confluence ----
+        pages = c["pages"]
+
+        def page(cid: str) -> dict[str, Any]:
+            found: dict[str, Any] | None = pages.get(str(cid))
+            if found is None:
+                raise ToolError("404 Not Found: content does not exist")
+            return found
+
+        def create_content(x: dict[str, Any]) -> dict[str, Any]:
+            sp = next((s for s in c["spaces"] if x["spaceKey"] in (s["key"], s["id"])), None)
+            if not sp:
+                raise ToolError("404 Not Found: space")
+            from ..formats.storage import markdown_to_storage
+
+            cid = str(nxt())
+            p = {"id": cid, "status": x.get("status", "current"), "title": x["title"], "spaceId": sp["id"], "parentId": x.get("parentId"), "authorId": "acc-ann",
+                 "createdAt": "2026-10-01T10:00:00.000Z", "version": {"number": 1, "createdAt": "2026-10-01T10:00:00.000Z"},
+                 "body": {"storage": {"value": markdown_to_storage(x.get("body") or "")}}, "_links": {"webui": f"/spaces/ENG/pages/{cid}"}}
+            pages[cid] = p
+            return p
+
+        def update_content(x: dict[str, Any]) -> dict[str, Any]:
+            from ..formats.storage import markdown_to_storage
+
+            p = page(x["contentId"])
+            if x.get("version") is not None and int(x["version"]) != p["version"]["number"]:
+                raise ToolError("409 Conflict: version mismatch")
+            if x.get("title"):
+                p["title"] = x["title"]
+            if x.get("body") is not None:
+                c["page_versions"].setdefault(p["id"], {})[str(p["version"]["number"])] = p["body"]["storage"]["value"]
+                p["body"] = {"storage": {"value": markdown_to_storage(x["body"])}}
+            p["version"] = {"number": p["version"]["number"] + 1, "createdAt": "2026-10-02T10:00:00.000Z", "message": x.get("versionMessage")}
+            return p
+
+        def move(x: dict[str, Any]) -> dict[str, Any]:
+            p = page(x["contentId"])
+            p["parentId"] = x.get("targetParentId")
+            return p
+
+        def copy(x: dict[str, Any]) -> dict[str, Any]:
+            src = page(x["contentId"])
+            cid = str(nxt())
+            pages[cid] = {**json.loads(json.dumps(src)), "id": cid, "parentId": x["destinationParentId"], "title": x.get("title") or f"Copy of {src['title']}",
+                          "version": {"number": 1, "createdAt": "2026-10-01T10:00:00.000Z"}}
+            return pages[cid]  # type: ignore[no-any-return]
+
+        def archive(x: dict[str, Any]) -> dict[str, Any]:
+            for cid in x["contentIds"]:
+                page(cid)["status"] = "archived"
+            return {"ok": True}
+
+        def unarchive(x: dict[str, Any]) -> dict[str, Any]:
+            for cid in x["contentIds"]:
+                page(cid)["status"] = "current"
+            return {"ok": True}
+
+        def restore(x: dict[str, Any]) -> dict[str, Any]:
+            p = page(x["contentId"])
+            html = c["page_versions"].get(p["id"], {}).get(str(x["version"]))
+            if html is None:
+                raise ToolError("404 Not Found: version")
+            p["body"] = {"storage": {"value": html}}
+            p["version"] = {"number": p["version"]["number"] + 1, "createdAt": "2026-10-02T10:00:00.000Z"}
+            return p
+
+        def labels(x: dict[str, Any]) -> dict[str, Any]:
+            page(x["contentId"])
+            cur = c["labels"].setdefault(str(x["contentId"]), [])
+            for name in x["labels"]:
+                if name not in {lb["name"] for lb in cur}:
+                    cur.append({"id": str(nxt()), "name": name, "prefix": "global"})
+            return {"labels": cur}
+
+        def add_comment(x: dict[str, Any]) -> dict[str, Any]:
+            page(x["contentId"])
+            kind = "inline" if x.get("inlineAnchor") else "footer"
+            from ..formats.storage import markdown_to_storage
+
+            cm = {"id": f"{'ic' if kind == 'inline' else 'fc'}{nxt()}", "body": {"storage": {"value": markdown_to_storage(x["body"])}},
+                  "version": {"number": 1, "authorId": "acc-ann", "createdAt": "2026-10-01T10:00:00.000Z"}, **({"resolutionStatus": "open"} if kind == "inline" else {})}
+            c["inline_comments" if kind == "inline" else "footer_comments"].setdefault(str(x["contentId"]), []).append(cm)
+            return {**cm, "kind": kind}
+
+        def find_comment(cid: str) -> dict[str, Any]:
+            for store in (c["footer_comments"], c["inline_comments"]):
+                for items in store.values():
+                    for cm in items:
+                        if cm["id"] == cid:
+                            return cm  # type: ignore[no-any-return]
+            raise ToolError("404 Not Found: comment")
+
+        def update_comment(x: dict[str, Any]) -> dict[str, Any]:
+            from ..formats.storage import markdown_to_storage
+
+            cm = find_comment(x["commentId"])
+            cm["body"] = {"storage": {"value": markdown_to_storage(x["body"])}}
+            return cm
+
+        def resolve(x: dict[str, Any]) -> dict[str, Any]:
+            find_comment(x["commentId"])["resolutionStatus"] = "resolved" if x["resolved"] else "open"
+            return {"ok": True}
+
+        def conf_upload(x: dict[str, Any]) -> dict[str, Any]:
+            page(x["contentId"])
+            data = base64.b64decode(x["contentBase64"])
+            att = {"id": f"cat{nxt()}", "title": x["filename"], "mediaType": "text/plain", "fileSize": len(data), "pageId": str(x["contentId"]),
+                   "downloadLink": f"/download/attachments/{x['contentId']}/{x['filename']}", "version": {"number": 1}}
+            c["attachments"].setdefault(str(x["contentId"]), []).append(att)
+            c["attachment_content"][att["id"]] = data
+            return att
+
+        def restriction(x: dict[str, Any]) -> dict[str, Any]:
+            page(x["contentId"])
+            c["restrictions"][str(x["contentId"])] = {
+                "read": {"operation": "read", "restrictions": {"user": {"results": [{"accountId": u, "displayName": u} for u in x.get("readUsers", [])]},
+                                                                "group": {"results": [{"name": g} for g in x.get("readGroups", [])]}}},
+                "update": {"operation": "update", "restrictions": {"user": {"results": [{"accountId": u, "displayName": u} for u in x.get("updateUsers", [])]},
+                                                                    "group": {"results": [{"name": g} for g in x.get("updateGroups", [])]}}}}
+            return {"ok": True}
+
+        def task(status: str) -> Callable[[dict[str, Any]], dict[str, Any]]:
+            def go(x: dict[str, Any]) -> dict[str, Any]:
+                t = next((t for t in c["tasks"] if t["id"] == x["taskId"]), None)
+                if not t:
+                    raise ToolError("404 Not Found: task")
+                t["status"] = status
+                return t  # type: ignore[no-any-return]
+            return go
+
+        def create_space(x: dict[str, Any]) -> dict[str, Any]:
+            sp = {"id": str(nxt()), "key": x["key"], "name": x["name"], "type": "global", "status": "current"}
+            c["spaces"].append(sp)
+            return sp
+
+        ack: Callable[[dict[str, Any]], dict[str, Any]] = lambda x: {"ok": True}  # noqa: E731
+        h["createConfluenceContent"] = create_content
+        h["updateConfluenceContent"] = update_content
+        h["moveConfluenceContent"] = move
+        h["copyConfluenceContent"] = copy
+        h["archiveConfluenceContent"] = archive
+        h["unarchiveConfluenceContent"] = unarchive
+        h["restoreConfluenceContentVersion"] = restore
+        h["setConfluenceContentStatus"] = lambda x: (page(x["contentId"]).update({"state": x["status"]}) or {"ok": True})
+        h["addLabelsToConfluenceContent"] = labels
+        h["createConfluenceComment"] = add_comment
+        h["updateConfluenceComment"] = update_comment
+        h["updateConfluenceCommentResolution"] = resolve
+        h["createConfluenceAttachment"] = conf_upload
+        h["setConfluenceContentRestrictionState"] = restriction
+        for tool in ("addConfluenceContentPermissions", "removeConfluenceContentPermissions", "replaceConfluenceContentPermissions", "enableConfluencePublicLink",
+                     "disableConfluencePublicLink", "starConfluenceContent", "unstarConfluenceContent", "starConfluenceSpace", "unstarConfluenceSpace",
+                     "watchConfluenceContent", "unwatchConfluenceContent", "watchConfluenceSpace", "unwatchConfluenceSpace", "watchConfluenceLabel",
+                     "unwatchConfluenceLabel", "addConfluenceReaction", "setConfluenceSpaceInstructions", "addTeamworkGraphContext"):
+            h[tool] = ack
+        h["completeConfluenceTask"] = task("complete")
+        h["reopenConfluenceTask"] = task("incomplete")
+        h["createConfluenceSpace"] = create_space
+        h["createConfluenceInfographicForPage"] = lambda x: {"id": f"inf{nxt()}", "contentId": x["contentId"], "prompt": x["prompt"]}
+        h["editConfluenceInfographicForPage"] = lambda x: {"id": x["infographicId"], "prompt": x["prompt"]}
+        h["createConfluenceMauiApp"] = lambda x: {"id": f"app{nxt()}", "contentId": x["contentId"], "spec": x["spec"]}
+        h["editConfluenceMauiApp"] = lambda x: {"id": x["appId"], "spec": x["spec"]}
+        h["getConfluenceMauiApp"] = lambda x: {"id": x["appId"], "spec": "demo"}

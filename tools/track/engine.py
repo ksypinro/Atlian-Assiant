@@ -63,7 +63,15 @@ class World:
         return bool(g and g.get("signed"))
 
     def max_active_phase(self) -> int:
-        """Index of the first unsigned gate, plus one (work on the next phase may start early)."""
+        """Index of the first unsigned gate, plus one (work on the next phase may start early).
+
+        The reviewer may raise the window explicitly with ``max_phase: P2`` in ``environment.yaml`` (work can start; gates are NOT signed).
+        """
+        p = self.store.base / "environment.yaml"
+        if p.exists():
+            override = (yaml.safe_load(p.read_text()) or {}).get("max_phase")
+            if override in PHASES:
+                return phase_index(override)
         for i, p in enumerate(PHASES):
             if not self.signed(p):
                 return min(i + 1, len(PHASES) - 1)

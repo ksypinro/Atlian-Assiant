@@ -9,6 +9,7 @@ from ..models.jira import Issue, JqlParseResult
 from ..routing import Router
 from ._generated_agile import JiraAgileClient
 from ._generated_jira import (
+    JiraAdminClient,
     JiraDashboardsClient,
     JiraExpressionsClient,
     JiraFiltersClient,
@@ -105,5 +106,5 @@ class JiraClient(Namespace):
         self.agile = JiraAgileClient(router)
         self.jql = JiraJqlClient(router)
         self.expressions = JiraExpressionsClient(router)
-        self.admin: Any = Unavailable("jira.admin", "P2")
+        self.admin = JiraAdminClient(router)
         self.api: Any = Unavailable("jira.api (generated REST tier)", "P6")

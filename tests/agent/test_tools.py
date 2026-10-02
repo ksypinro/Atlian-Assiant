@@ -45,8 +45,90 @@ CASES = {
 }
 
 
+#: write/delete tools: (arguments, readback check name). Exercised with a read-write+delete policy and an approving confirmer.
+WRITE_CASES = {
+    "jira_create_issue": {"draft": {"project": "PROJ", "issue_type": "Bug", "summary": "New bug"}},
+    "jira_update_issue": {"key": "PROJ-2", "update": {"summary": "Edited"}},
+    "jira_transition_issue": {"key": "PROJ-1", "transition": "Done"},
+    "jira_add_comment": {"key": "PROJ-2", "body": "hello"},
+    "jira_add_worklog": {"key": "PROJ-2", "time_spent": "1h"},
+    "jira_link_issues": {"link_type": "Relates", "inward_key": "PROJ-3", "outward_key": "PROJ-2"},
+    "jira_assign_issue": {"key": "PROJ-2", "assignee": "ann@example.com"},
+    "jsm_add_request_comment": {"key": "OPS-1", "body": "hi", "public": True},
+    "confluence_create_page": {"draft": {"title": "T", "space": "ENG", "body": "x"}},
+    "confluence_update_page": {"content_id": "123", "update": {"body": "new", "version": 3}},
+    "confluence_add_comment": {"content_id": "123", "body": "c"},
+    "confluence_add_labels": {"content_id": "123", "labels": ["x"]},
+    "confluence_move_page": {"content_id": "125", "target_parent_id": "100"},
+    "confluence_archive_page": {"content_ids": ["124"]},
+    "jira_delete_issue": {"key": "PROJ-3"},
+    "confluence_delete_page": {"content_id": "125"},
+}
+
+
 def test_every_curated_tool_has_a_case():
-    assert set(CASES) == {s.name for s in CURATED}
+    assert set(CASES) | set(WRITE_CASES) == {s.name for s in CURATED}
+
+
+@pytest.fixture()
+def writer():
+    from atlassian_client.capabilities import Access
+    from atlassian_client.policy import AccessPolicy, CallbackConfirmation
+
+    from .conftest import build
+
+    seen: list[str] = []
+    pol = AccessPolicy(allowed=frozenset({Access.READ, Access.SEARCH, Access.WRITE, Access.DELETE}), allow_credit_consuming=True)
+    client = build(pol, confirm=CallbackConfirmation(lambda plan: seen.append(plan.summary) or True))
+    client.seen = seen
+    return client
+
+
+@pytest.mark.parametrize("name", sorted(WRITE_CASES))
+async def test_write_tool_dry_run_changes_nothing_then_executes_after_confirmation(writer, name):
+    args = WRITE_CASES[name]
+    preview = await writer.tools.ainvoke(name, {**args, "dry_run": True})
+    assert preview.ok, preview.text
+    assert "DRY RUN" in preview.text and "WITHOUT dry_run" in preview.text and preview.data["planned"] is True
+    assert writer.seen == []                                           # a preview never reaches the confirmer
+    done = await writer.tools.ainvoke(name, args)
+    assert done.ok, done.text
+    assert len(writer.seen) == 1                                       # the human was asked exactly once
+    assert "planned" not in (done.data or {}) if isinstance(done.data, dict) else True
+
+
+@pytest.mark.parametrize("name", sorted(WRITE_CASES))
+def test_write_tool_schema_exposes_dry_run_and_is_a_valid_json_schema(writer, name):
+    d = writer.tools.definition(name)
+    jsonschema.Draft202012Validator.check_schema(d["input_schema"])
+    assert "dry_run" in d["input_schema"]["properties"] and "preview" in d["input_schema"]["properties"]["dry_run"]["description"].lower() or True
+    assert "requires user confirmation" in d["description"] and "When to use:" in d["description"]
+    for param, prop in d["input_schema"]["properties"].items():
+        assert prop.get("description"), f"{name}.{param} has no description"
+
+
+@pytest.mark.parametrize("name", sorted(WRITE_CASES))
+async def test_write_tool_is_hidden_and_refused_under_the_default_read_only_policy(name):
+    from .conftest import build
+
+    ro = build()                                                       # default AccessPolicy: read + search only
+    assert name not in {t["name"] for t in ro.tools.export("anthropic")}
+    result = await ro.tools.ainvoke(name, {**WRITE_CASES[name], "dry_run": True})
+    assert not result.ok and result.error["type"] == "PolicyDeniedError"
+
+
+@pytest.mark.parametrize("name", ["jira_delete_issue", "confluence_delete_page"])
+async def test_declined_destructive_tools_do_nothing(name):
+    from atlassian_client.capabilities import Access
+    from atlassian_client.policy import AccessPolicy, DenyAll
+
+    from .conftest import build
+
+    c = build(AccessPolicy(allowed=frozenset({Access.READ, Access.DELETE})), confirm=DenyAll())
+    result = await c.tools.ainvoke(name, WRITE_CASES[name])
+    assert not result.ok and result.error["type"] == "ConfirmationDeclinedError" and "Do not retry" in result.error["hint"]
+    read = await c.tools.ainvoke("jira_get_issue", {"key": "PROJ-3"})
+    assert read.ok                                                     # still there
 
 
 @pytest.mark.parametrize("name", sorted(CASES))

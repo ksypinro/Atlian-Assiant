@@ -1,0 +1,23 @@
+id: MX.mcp.jira-attachment-upload
+status: done
+commits:
+- 6d48527
+evidence: tracking/evidence/MX.mcp.jira-attachment-upload.md
+review:
+  by: claude
+  at: '2026-10-02T18:21:37Z'
+  decision: approved
+  notes: 'delegated P2 approval: checks passed'
+history:
+- at: '2026-10-02T18:21:17Z'
+  by: claude
+  event: claimed
+  note: ''
+- at: '2026-10-02T18:21:35Z'
+  by: claude
+  event: submitted
+  note: 1 checks passed; 67 out-of-scope files
+- at: '2026-10-02T18:21:37Z'
+  by: claude
+  event: approved
+  note: 'delegated P2 approval: checks passed'

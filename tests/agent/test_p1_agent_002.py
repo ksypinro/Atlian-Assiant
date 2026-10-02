@@ -8,7 +8,7 @@ from atlassian_client.testing import FakeBackend
 
 from .conftest import build
 
-pytestmark = pytest.mark.anyio
+pytestmark = [pytest.mark.anyio, pytest.mark.layer_10]
 
 
 def guard(policy=None, confirm=None, **kw):
@@ -121,7 +121,7 @@ async def test_delete_plans_carry_a_destructive_warning_and_read_ops_ignore_dry_
     d = await guard(pol, DenyAll()).authorize(ops.JIRA_ISSUE_DELETE, ("PROJ-1",), {"dry_run": True})
     assert "destructive" in d.plan.warnings[0]
     d = await guard().authorize(ops.JIRA_ISSUE_GET, ("PROJ-1",), {"dry_run": True})
-    assert d.plan is None and d.kwargs["dry_run"] is False
+    assert d.plan is None and "dry_run" not in d.kwargs
 
 
 async def test_confirmation_not_required_when_the_policy_does_not_ask_for_it():

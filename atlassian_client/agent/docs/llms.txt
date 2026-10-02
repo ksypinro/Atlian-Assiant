@@ -1,7 +1,7 @@
 # AtlassianClient
 
 > One documented Python client over every way of reading, writing and watching Jira and Confluence (REST, MCP, CLIs, GraphQL,
-> browser, Data Lake, events). 203 operations; 34 curated LLM tools.
+> browser, Data Lake, events). 203 operations; 50 curated LLM tools.
 
 ## Docs
 

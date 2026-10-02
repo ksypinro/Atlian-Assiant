@@ -215,8 +215,8 @@ async def test_graph_context_and_objects():
     assert ctx.related[0].title == "Login fails" and ctx.relationships == [{"type": "mentions"}]
     objs = await reader.get_objects(["ari:a", "ari:b"])
     assert [o.ari for o in objs] == ["ari:a", "ari:b"]
-    with pytest.raises(UnsupportedOperationError):
-        await reader.add_context("x", {})
+    writer = implementation_of(make_mcp()[0], __import__("atlassian_client.protocols", fromlist=["TeamworkGraphWriter"]).TeamworkGraphWriter)
+    assert await writer.add_context("x", {"a": 1}) is None
 
 
 async def test_graph_semantic_search_hits():

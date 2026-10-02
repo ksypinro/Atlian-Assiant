@@ -41,9 +41,9 @@ async def test_documented_examples_are_executable_against_the_fake():
 
 def test_positional_parameters_match_the_protocol_they_route_to():
     """Facade signatures must stay in step with the protocols: same positional names, same keyword-only names."""
-    protos = {p.__name__: p for p in (JiraIssueReader, JiraIssueSearcher, JiraProjectReader, JiraMetadataReader, JiraUserDirectory,
-                                      JiraJqlTools, JiraAgileReader, JsmReader, ConfluenceContentReader, ConfluenceSearcher,
-                                      ConfluenceSpaceReader, ConfluenceTemplateReader, RawRequester, SemanticSearcher, TeamworkGraphReader)}
+    import atlassian_client.protocols as P
+
+    protos = {n: getattr(P, n) for n in P.__all__ if hasattr(getattr(P, n), '_is_protocol')}
     checked = 0
     for path, ns in walk_namespaces(make()):
         for op_id, method_name in ns._OPS.items():
@@ -51,12 +51,13 @@ def test_positional_parameters_match_the_protocol_they_route_to():
             proto_name, proto_method = src.split('self._call("' + op_id + '", ')[1].split(", ")[0], src.split('self._call("' + op_id + '", ')[1].split('"')[1]
             sig_f = inspect.signature(getattr(ns, method_name))
             sig_p = inspect.signature(getattr(protos[proto_name], proto_method))
-            pos = lambda s: [n for n, p in s.parameters.items() if p.kind is p.POSITIONAL_OR_KEYWORD and n != "self"]  # noqa: E731
-            kw = lambda s: {n for n, p in s.parameters.items() if p.kind is p.KEYWORD_ONLY and n != "backend"}  # noqa: E731
+            expand = [x for x, p in sig_p.parameters.items() if p.kind is p.VAR_KEYWORD]
+            pos = lambda s: [n for n, p in s.parameters.items() if p.kind is p.POSITIONAL_OR_KEYWORD and n != "self"] + ([] if s is sig_f or not expand else expand)  # noqa: E731
+            kw = lambda s: {n for n, p in s.parameters.items() if p.kind is p.KEYWORD_ONLY and n not in ("backend", "dry_run")}  # noqa: E731
             assert pos(sig_f) == pos(sig_p), f"{path}.{method_name}: positional parameters differ from {proto_name}.{proto_method}"
             assert kw(sig_f) == kw(sig_p), f"{path}.{method_name}: keyword parameters differ from {proto_name}.{proto_method}"
             checked += 1
-    assert checked >= 75
+    assert checked >= 140
 
 
 @pytest.mark.anyio
@@ -92,5 +93,3 @@ def test_planned_namespaces_fail_loudly_and_name_the_phase():
         with pytest.raises(UnsupportedOperationError) as exc:
             ns.anything
         assert phase in str(exc.value) and "TRACKING.md" in exc.value.hint
-    with pytest.raises(UnsupportedOperationError):
-        c.jira.admin.workflows

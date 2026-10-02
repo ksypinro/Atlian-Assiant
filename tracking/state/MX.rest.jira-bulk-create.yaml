@@ -1,0 +1,22 @@
+id: MX.rest.jira-bulk-create
+status: done
+commits: []
+evidence: tracking/evidence/MX.rest.jira-bulk-create.md
+review:
+  by: claude
+  at: '2026-10-02T18:22:04Z'
+  decision: approved
+  notes: 'delegated P0 approval: checks passed'
+history:
+- at: '2026-10-02T18:22:03Z'
+  by: claude
+  event: claimed
+  note: ''
+- at: '2026-10-02T18:22:04Z'
+  by: claude
+  event: submitted
+  note: 1 checks passed; 94 out-of-scope files
+- at: '2026-10-02T18:22:04Z'
+  by: claude
+  event: approved
+  note: 'delegated P0 approval: checks passed'

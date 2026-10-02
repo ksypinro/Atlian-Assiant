@@ -13,6 +13,7 @@ from .confluence import (
     ConfluenceSearcher,
     ConfluenceSpaceReader,
     ConfluenceSpaceWriter,
+    ConfluenceSpecialContent,
     ConfluenceTemplateReader,
     ContentType,
 )
@@ -35,4 +36,4 @@ from .jsm import JsmReader, JsmWriter
 from .raw import RawRequester
 from .webhooks import WebhookManager
 
-__all__ = ['AnalyticsReader', 'AutomationTrigger', 'Backend', 'BackendHealth', 'ConfluenceContentDeleter', 'ConfluenceContentReader', 'ConfluenceContentWriter', 'ConfluenceExporter', 'ConfluencePermissionWriter', 'ConfluenceSearcher', 'ConfluenceSpaceReader', 'ConfluenceSpaceWriter', 'ConfluenceTemplateReader', 'ContentType', 'GraphQLExecutor', 'IdentityReader', 'JiraAdmin', 'JiraAgileReader', 'JiraAgileWriter', 'JiraExporter', 'JiraIssueDeleter', 'JiraIssueReader', 'JiraIssueSearcher', 'JiraIssueWriter', 'JiraJqlTools', 'JiraMetadataReader', 'JiraProjectReader', 'JiraProjectWriter', 'JiraUserDirectory', 'JsmReader', 'JsmWriter', 'OrgAuditReader', 'RawRequester', 'SemanticSearcher', 'TeamworkGraphReader', 'TeamworkGraphWriter', 'WebhookManager', 'implementation_of']
+__all__ = ['AnalyticsReader', 'AutomationTrigger', 'Backend', 'BackendHealth', 'ConfluenceContentDeleter', 'ConfluenceContentReader', 'ConfluenceContentWriter', 'ConfluenceExporter', 'ConfluencePermissionWriter', 'ConfluenceSearcher', 'ConfluenceSpaceReader', 'ConfluenceSpaceWriter', 'ConfluenceSpecialContent', 'ConfluenceTemplateReader', 'ContentType', 'GraphQLExecutor', 'IdentityReader', 'JiraAdmin', 'JiraAgileReader', 'JiraAgileWriter', 'JiraExporter', 'JiraIssueDeleter', 'JiraIssueReader', 'JiraIssueSearcher', 'JiraIssueWriter', 'JiraJqlTools', 'JiraMetadataReader', 'JiraProjectReader', 'JiraProjectWriter', 'JiraUserDirectory', 'JsmReader', 'JsmWriter', 'OrgAuditReader', 'RawRequester', 'SemanticSearcher', 'TeamworkGraphReader', 'TeamworkGraphWriter', 'WebhookManager', 'implementation_of']

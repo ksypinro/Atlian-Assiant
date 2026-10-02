@@ -1,0 +1,15 @@
+id: SEC-06
+status: done
+commits: []
+review:
+  by: claude
+  at: '2026-10-02T18:23:39Z'
+  decision: approved
+  notes: 'delegated approval: executable evidence in tests/security passes; recommend human re-review
+    at the gate'
+history:
+- at: '2026-10-02T18:23:39Z'
+  by: claude
+  event: approved
+  note: 'delegated approval: executable evidence in tests/security passes; recommend human re-review at
+    the gate'

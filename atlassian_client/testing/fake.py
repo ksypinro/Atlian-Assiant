@@ -13,7 +13,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, ClassVar, Literal, TypeVar
 
-from ..backends.mcp.backend import OP_TOOLS
+from ..backends.mcp.backend import ALL_OP_TOOLS
 from ..backends.rest_cloud import normalize as n
 from ..backends.rest_cloud.backend import SUPPORTED
 from ..capabilities import BackendKind, Deployment
@@ -252,6 +252,10 @@ class FakeJira(_Base):
 
     # ---- writer ----
     async def create_issue(self, draft: IssueDraft) -> CreatedIssue:
+        from ..core.errors import InvalidRequestError
+
+        if not draft.summary.strip():
+            raise InvalidRequestError("You must specify a summary of the issue.", hint="Set IssueDraft.summary.")
         num = next(self.s.counter)
         key = f"{draft.project}-{num}"
         self.s.issues[key] = Issue(id=str(10000 + num), key=key, summary=draft.summary, issue_type=draft.issue_type,
@@ -260,9 +264,17 @@ class FakeJira(_Base):
         return CreatedIssue(id=str(10000 + num), key=key)
 
     async def bulk_create_issues(self, drafts: Sequence[IssueDraft]) -> list[CreatedIssue]:
+        from ..core.errors import InvalidRequestError
+
+        if not 1 <= len(drafts) <= 50:
+            raise InvalidRequestError("bulk create accepts 1 to 50 issues per call", hint="Split the list into chunks of at most 50.")
         return [await self.create_issue(d) for d in drafts]
 
     async def edit_issue(self, key: str, update: IssueUpdate, *, notify_users: bool = True) -> None:
+        from ..core.errors import InvalidRequestError
+
+        if not (update.summary or update.description is not None or update.labels_add or update.labels_remove or update.fields):
+            raise InvalidRequestError("nothing to update", hint="Set at least one of summary, description, labels or fields.")
         issue = _find(self.s.issues, key.upper(), "issue")
         if update.summary is not None:
             issue.summary = update.summary
@@ -278,7 +290,7 @@ class FakeJira(_Base):
     async def transition_issue(self, key: str, transition: str, *, fields: dict[str, Any] | None = None,
                                comment: BodyInput | str | None = None) -> None:
         issue = _find(self.s.issues, key.upper(), "issue")
-        t = next((x for x in self.s.transitions.get(key.upper(), []) if transition in (x.id, x.name)), None)
+        t = next((x for x in self.s.transitions.get(key.upper(), []) if transition in (x.id, x.name) or x.name.lower() == transition.lower()), None)
         if t is None:
             raise NotFoundError(f"transition {transition!r} is not available for {key}", hint="Call list_transitions first.")
         issue.status = t.to_status
@@ -325,10 +337,13 @@ class FakeJira(_Base):
 
     async def watch_issue(self, key: str, *, watch: bool = True, account_id: str | None = None) -> None:
         w = self.s.watchers.setdefault(key.upper(), [])
-        if watch and self.s.me not in w:
-            w.append(self.s.me)
-        elif not watch:
-            self.s.watchers[key.upper()] = [u for u in w if u.account_id != (account_id or self.s.me.account_id)]
+        target = account_id or self.s.me.account_id
+        if watch:
+            user = next((u for u in self.s.users if u.account_id == target), self.s.me)
+            if user.account_id not in {x.account_id for x in w}:
+                w.append(user)
+        else:
+            self.s.watchers[key.upper()] = [u for u in w if u.account_id != target]
 
     async def set_property(self, key: str, property_key: str, value: Any) -> None:
         self.s.properties.setdefault(key.upper(), {})[property_key] = value
@@ -351,6 +366,8 @@ class FakeJira(_Base):
     async def delete_attachment(self, attachment_id: str) -> None:
         _find(self.s.attachment_bytes, attachment_id, "attachment")
         del self.s.attachment_bytes[attachment_id]
+        for issue in self.s.issues.values():
+            issue.fields["attachment"] = [a for a in issue.fields.get("attachment", []) if str(a["id"]) != attachment_id]
 
     # ---- projects / metadata / users ----
     async def list_projects(self, *, query: str | None = None, limit: int = 50, cursor: str | None = None) -> Page[Project]:
@@ -367,9 +384,25 @@ class FakeJira(_Base):
         return list(self.s.versions.get(project.upper(), []))
 
     async def manage_version(self, project: str, change: VersionChange) -> Version:
-        v = Version(id=change.version_id or f"v{next(self.s.counter)}", name=change.name or "", released=change.action == "release")
-        self.s.versions.setdefault(project.upper(), []).append(v)
-        return v
+        from ..core.errors import InvalidRequestError
+
+        versions = self.s.versions.setdefault(project.upper(), [])
+        if change.action == "create":
+            v = Version(id=f"v{next(self.s.counter)}", name=change.name or "")
+            versions.append(v)
+            return v
+        if change.action not in ("update", "release", "unrelease", "archive", "delete") or not change.version_id:
+            raise InvalidRequestError(f"{change.action} needs a valid action and version_id", hint="Get ids from list_versions.")
+        target = next((x for x in versions if x.id == change.version_id), None)
+        if target is None:
+            raise NotFoundError(f"version {change.version_id} not found")
+        if change.action == "delete":
+            versions.remove(target)
+            return target
+        target.name = change.name or target.name
+        target.released = {"release": True, "unrelease": False}.get(change.action, target.released)
+        target.archived = target.archived or change.action == "archive"
+        return target
 
     async def list_fields(self) -> list[Field]:
         return list(self.s.fields)
@@ -503,6 +536,20 @@ class FakeAgile(_Base):
         return self.page(_find(self.s.epics, str(board_id), "board"), limit, cursor)
 
     async def manage_sprint(self, change: SprintChange) -> Sprint:
+        from ..core.errors import InvalidRequestError
+
+        if change.action == "create" and (change.board_id is None or not change.name):
+            raise InvalidRequestError("creating a sprint needs board_id and name", hint="Set SprintChange.board_id and .name.")
+        if change.action != "create" and change.sprint_id is not None:
+            for sprints in self.s.sprints.values():
+                for existing in sprints:
+                    if existing.id == change.sprint_id:
+                        if change.action == "delete":
+                            sprints.remove(existing)
+                            return existing.model_copy(update={"state": "deleted"})
+                        existing.state = {"start": "active", "close": "closed"}.get(change.action, existing.state)
+                        existing.name = change.name or existing.name
+                        return existing
         sid = change.sprint_id or next(self.s.counter)
         sp = Sprint(id=sid, name=change.name or f"Sprint {sid}", state={"start": "active", "close": "closed"}.get(change.action, "future"), goal=change.goal)
         if change.board_id is not None:
@@ -516,7 +563,10 @@ class FakeAgile(_Base):
         return None
 
     async def rank_issues(self, issue_keys: Sequence[str], *, before: str | None = None, after: str | None = None) -> None:
-        return None
+        from ..core.errors import InvalidRequestError
+
+        if bool(before) == bool(after):
+            raise InvalidRequestError("rank needs exactly one of before / after", hint="Pass the key to rank before or after.")
 
     async def create_board(self, name: str, *, filter_id: int, board_type: str = "scrum") -> Board:
         b = Board(id=next(self.s.counter), name=name, type=board_type)
@@ -729,7 +779,8 @@ class FakeConfluence(_Base):
     async def update_content(self, content_id: str, update: ContentUpdate) -> Content:
         c = _find(self.s.pages, content_id, "content")
         if update.version is not None and update.version != c.version:
-            raise ConflictError("Page version changed. Re-fetch and retry with version = current + 1.", status=409)
+            raise ConflictError("Page version changed. Re-fetch and retry with version = current + 1.", hint="Page version changed. Re-fetch with confluence_get_page "
+                                                                                                 "and retry with version = current.", status=409)
         c.version = (c.version or 1) + 1
         c.title = update.title or c.title
         c.body_markdown = update.body if update.body is not None else c.body_markdown
@@ -737,6 +788,10 @@ class FakeConfluence(_Base):
         return c.model_copy(deep=True)
 
     async def move_content(self, content_id: str, *, target_parent_id: str | None = None, target_space: str | None = None, position: str = "append") -> Content:
+        from ..core.errors import InvalidRequestError
+
+        if not target_parent_id:
+            raise InvalidRequestError("move needs target_parent_id", hint="Moving to a space root needs the space homepage id as target_parent_id.")
         c = _find(self.s.pages, content_id, "content")
         c.parent_id = target_parent_id
         return c
@@ -810,7 +865,10 @@ class FakeConfluence(_Base):
         return t
 
     async def watch(self, *, content_id: str | None = None, space_key: str | None = None, label: str | None = None, watch: bool = True) -> None:
-        return None
+        from ..core.errors import InvalidRequestError
+
+        if not (content_id or space_key or label):
+            raise InvalidRequestError("watch needs content_id, space_key or label", hint="Pass exactly one.")
 
     async def star(self, *, content_id: str | None = None, space_key: str | None = None, star: bool = True) -> None:
         return None
@@ -827,13 +885,22 @@ class FakeConfluence(_Base):
         await self.get_space(key_or_id)
 
     async def add_permissions(self, content_id: str, grants: Sequence[dict[str, Any]]) -> None:
+        from ..backends.rest_cloud.confluence_write import _apply
+
         _find(self.s.pages, content_id, "content")
+        self.s.restrictions[content_id] = _apply(self.s.restrictions.get(content_id, Restrictions()), grants, remove=False)
 
     async def remove_permissions(self, content_id: str, grants: Sequence[dict[str, Any]]) -> None:
+        from ..backends.rest_cloud.confluence_write import _apply
+
         _find(self.s.pages, content_id, "content")
+        self.s.restrictions[content_id] = _apply(self.s.restrictions.get(content_id, Restrictions()), grants, remove=True)
 
     async def replace_permissions(self, content_id: str, grants: Sequence[dict[str, Any]]) -> None:
+        from ..backends.rest_cloud.confluence_write import _apply
+
         _find(self.s.pages, content_id, "content")
+        self.s.restrictions[content_id] = _apply(Restrictions(), grants, remove=False)
 
     async def set_public_link(self, content_id: str, *, enabled: bool) -> None:
         _find(self.s.pages, content_id, "content")
@@ -853,6 +920,29 @@ class FakeConfluence(_Base):
     async def delete_attachment(self, attachment_id: str, *, purge: bool = False) -> None:
         _find(self.s.conf_attachment_bytes, attachment_id, "attachment")
         del self.s.conf_attachment_bytes[attachment_id]
+        for k, items in self.s.conf_attachments.items():
+            self.s.conf_attachments[k] = [a for a in items if a.id != attachment_id]
+
+
+class FakeConfluenceSpecial(_Base):
+    """MCP-only special content (infographics, MAUI apps)."""
+
+    async def get_maui_app(self, app_id: str) -> dict[str, Any]:
+        return {"id": app_id, "spec": "demo"}
+
+    async def create_infographic(self, content_id: str, *, prompt: str) -> dict[str, Any]:
+        _find(self.s.pages, content_id, "content")
+        return {"id": f"inf{next(self.s.counter)}", "contentId": content_id, "prompt": prompt}
+
+    async def edit_infographic(self, content_id: str, infographic_id: str, *, prompt: str) -> dict[str, Any]:
+        return {"id": infographic_id, "prompt": prompt}
+
+    async def create_maui_app(self, content_id: str, *, spec: str) -> dict[str, Any]:
+        _find(self.s.pages, content_id, "content")
+        return {"id": f"app{next(self.s.counter)}", "contentId": content_id, "spec": spec}
+
+    async def edit_maui_app(self, app_id: str, *, spec: str) -> dict[str, Any]:
+        return {"id": app_id, "spec": spec}
 
 
 class FakeGraph(_Base):
@@ -993,12 +1083,13 @@ class FakeBackend:
         self.store = FakeStore(raw or scenario(), kind)
         s = self.store
         self.jira, self.agile, self.jsm = FakeJira(s), FakeAgile(s), FakeJsm(s)
+        self.special = FakeConfluenceSpecial(s)
         self.confluence, self.graph, self.analytics, self.exports = FakeConfluence(s), FakeGraph(s), FakeAnalytics(s), FakeExports(s)
         self.audit, self.automation, self.webhooks = FakeAudit(s), FakeAutomation(s), FakeWebhooks(s)
         self.identity, self.raw = FakeIdentity(s), FakeRaw(s)
-        self._parts: tuple[object, ...] = (self.jira, self.agile, self.jsm, self.confluence, self.graph, self.analytics, self.exports,
+        self._parts: tuple[object, ...] = (self.jira, self.agile, self.jsm, self.confluence, self.special, self.graph, self.analytics, self.exports,
                                            self.audit, self.automation, self.webhooks, self.identity, self.raw)
-        self._ops = operations if operations is not None else SUPPORTED | frozenset(OP_TOOLS)
+        self._ops = operations if operations is not None else SUPPORTED | frozenset(ALL_OP_TOOLS)
         self.calls: list[str] = []
 
     def implementation_for(self, protocol: type) -> object | None:

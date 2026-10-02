@@ -40,6 +40,37 @@ COMMON = {
     "type": 'Content type: page, blogpost, whiteboard, database, folder, embed or custom_content.',
     "body_format": '"markdown" (default), "storage", "atlas_doc_format", "view" or "none".',
     "space_id": "Numeric space id.",
+    "ari_or_url": "Atlassian Resource Identifier or the entity URL.",
+    "comment": "Optional Markdown comment.",
+    "enabled": "True to enable, False to disable.",
+    "prompt": "What it should show or do.",
+    "spec": "Description of the app to build.",
+    "dry_run": "True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.",
+    "draft": "The new item's fields.",
+    "update": "The changes to apply.",
+    "body": "Text as Markdown (default), or a BodyInput for ADF / storage / plain.",
+    "comment_id": "Comment id.",
+    "notify_users": "Send watcher notifications.",
+    "assignee": "accountId, email or display name (resolved), or None to unassign.",
+    "transition": "Transition name or id (see `jira.issues.transitions`).",
+    "link_type": "Link type name (see `jira.metadata.link_types`).",
+    "title": "Title.",
+    "url": "URL.",
+    "property_key": "Property key.",
+    "value": "JSON-serializable value.",
+    "attachment_id": "Attachment id.",
+    "file": "File path or raw bytes.",
+    "filename": "File name to store (defaults to the path's name).",
+    "content_ids": "Confluence content ids.",
+    "purge": "Permanently delete instead of moving to trash.",
+    "labels": "Label names.",
+    "label": "Label name.",
+    "emoji": "Emoji name.",
+    "grants": "Grants like {\"operation\": \"read\", \"group\": \"eng\"} or {\"operation\": \"update\", \"user\": accountId}.",
+    "change": "The change to apply.",
+    "issue_keys": "Issue keys.",
+    "name": "Name.",
+    "key": 'Key (e.g. "PROJ-123" for issues, "PROJ" for projects).',
     "kind": "Which kind.",
     "status": "Status filter.",
     "depth": "Maximum depth.",
@@ -59,6 +90,7 @@ class M:
     when: str
     example: str
     docs: dict[str, str] = field(default_factory=dict)
+    expand: str | None = None          # name of a dict parameter passed to the protocol as **kwargs
     raises: str = "NoBackendAvailableError: No configured backend can serve this operation."
 
 
@@ -354,36 +386,273 @@ cls("RawClient", "Raw access to any REST endpoint with auth, retry and paginatio
             "params": "Query parameters.", "json": "JSON request body.", "headers": "Extra headers."}),
 ])
 
+
+def extend(name: str, methods: list[M]) -> None:
+    for entry in SPECS:
+        if entry[0] == name:
+            entry[3].extend(methods)
+            return
+    raise KeyError(name)
+
+
+# ---------------------------------------------------------------- P2: writes (every method gets dry_run automatically)
+extend("JiraIssuesClient", [
+    M("create", "jira.issue.create", "JiraIssueWriter", "create_issue", "draft: IssueDraft", "CreatedIssue", "Create a Jira issue.",
+      "The user asked you to create a ticket. Fetch valid issue types with `jira.metadata.issue_types` first.",
+      'r = await client.jira.issues.create(IssueDraft(project="PROJ", issue_type="Bug", summary="Login fails"), dry_run=True)',
+      docs={"draft": "IssueDraft: project key, issue type, summary, optional Markdown description, assignee, labels, parent, extra fields by NAME or id."}),
+    M("bulk_create", "jira.issue.bulk_create", "JiraIssueWriter", "bulk_create_issues", "drafts: Sequence[IssueDraft]", "_List[CreatedIssue]",
+      "Create up to 50 issues in one call.", "Creating many similar issues.", 'r = await client.jira.issues.bulk_create([IssueDraft(project="PROJ", issue_type="Task", summary="A")], dry_run=True)',
+      docs={"drafts": "1 to 50 IssueDraft objects."}),
+    M("edit", "jira.issue.edit", "JiraIssueWriter", "edit_issue", "key: str, update: IssueUpdate, *, notify_users: bool = True", "None",
+      "Edit an issue's summary, description, labels or fields.", "Changing existing issue data. To change status use `transition`.",
+      'r = await client.jira.issues.edit("PROJ-1", IssueUpdate(summary="New title"), dry_run=True)'),
+    M("assign", "jira.issue.assign", "JiraIssueWriter", "assign_issue", "key: str, assignee: str | None", "None", "Assign an issue to a person (or unassign).",
+      "The user asks to assign or unassign.", 'r = await client.jira.issues.assign("PROJ-1", "ann@example.com", dry_run=True)'),
+    M("transition", "jira.issue.transition", "JiraIssueWriter", "transition_issue",
+      "key: str, transition: str, *, fields: dict[str, Any] | None = None, comment: BodyInput | str | None = None", "None",
+      "Move an issue through its workflow (e.g. to Done).", "The user asks to change an issue's status. List options with `transitions` first.",
+      'r = await client.jira.issues.transition("PROJ-1", "Done", dry_run=True)',
+      docs={"fields": "Fields required by the transition screen (names or ids).", "comment": "Optional Markdown comment added with the transition."}),
+    M("add_comment", "jira.issue.comment.add", "JiraIssueWriter", "add_comment", "key: str, body: BodyInput | str, *, visibility: dict[str, str] | None = None",
+      "Comment", "Add a comment to an issue.", "The user asks you to comment.", 'r = await client.jira.issues.add_comment("PROJ-1", "Looking into it", dry_run=True)',
+      docs={"visibility": 'Restrict to a role/group, e.g. {"type": "role", "value": "Developers"}.'}),
+    M("edit_comment", "jira.issue.comment.edit", "JiraIssueWriter", "edit_comment", "key: str, comment_id: str, body: BodyInput | str", "Comment",
+      "Edit an existing comment.", "Correcting your own earlier comment.", 'r = await client.jira.issues.edit_comment("PROJ-1", "10000", "fixed", dry_run=True)'),
+    M("add_worklog", "jira.issue.worklog.add", "JiraIssueWriter", "add_worklog",
+      "key: str, time_spent: str, *, started: str | None = None, comment: BodyInput | str | None = None", "Worklog", "Log time on an issue.",
+      "The user asks to log work.", 'r = await client.jira.issues.add_worklog("PROJ-1", "2h", dry_run=True)',
+      docs={"time_spent": 'Jira duration, e.g. "2h 30m".', "started": "ISO-8601 start time; default now."}),
+    M("link", "jira.issue.link.create", "JiraIssueWriter", "create_link", "link_type: str, inward_key: str, outward_key: str", "None",
+      "Link two issues.", "The user asks to relate/block/duplicate issues.", 'r = await client.jira.issues.link("Blocks", "PROJ-1", "PROJ-2", dry_run=True)',
+      docs={"inward_key": "Issue key on the inward side.", "outward_key": "Issue key on the outward side."}),
+    M("add_remote_link", "jira.issue.remote_link.create", "JiraIssueWriter", "create_remote_link", "key: str, url: str, title: str", "RemoteLink",
+      "Attach a web link to an issue.", "Referencing an external page.", 'r = await client.jira.issues.add_remote_link("PROJ-1", "https://example.com", "Doc", dry_run=True)'),
+    M("upload_attachment", "jira.issue.attachment.upload", "JiraIssueWriter", "upload_attachment", "key: str, file: Path | bytes, *, filename: str | None = None",
+      "_List[JiraAttachment]", "Upload a file to an issue.", "The user asks to attach a file.", 'r = await client.jira.issues.upload_attachment("PROJ-1", b"data", filename="a.txt", dry_run=True)'),
+    M("watch", "jira.issue.watch", "JiraIssueWriter", "watch_issue", "key: str, *, watch: bool = True, account_id: str | None = None", "None",
+      "Start or stop watching an issue.", "The user wants notifications for an issue.", 'r = await client.jira.issues.watch("PROJ-1", dry_run=True)',
+      docs={"watch": "True to watch, False to stop."}),
+    M("set_property", "jira.issue.property.set", "JiraIssueWriter", "set_property", "key: str, property_key: str, value: Any", "None",
+      "Set an app-defined JSON property on an issue.", "Storing app metadata on an issue.", 'r = await client.jira.issues.set_property("PROJ-1", "my.app", {"a": 1}, dry_run=True)'),
+    M("convert_hierarchy", "jira.issue.hierarchy.convert", "JiraIssueWriter", "convert_hierarchy", "key: str, *, new_issue_type: str, new_parent: str | None = None", "None",
+      "Change an issue's hierarchy level (MCP only).", "Turning a task into a sub-task or epic.", 'r = await client.jira.issues.convert_hierarchy("PROJ-1", new_issue_type="Epic", dry_run=True)',
+      docs={"new_issue_type": "Target issue type name.", "new_parent": "New parent key, if any."}),
+    M("delete", "jira.issue.delete", "JiraIssueDeleter", "delete_issue", "key: str, *, delete_subtasks: bool = False", "None",
+      "Permanently delete an issue.", "ONLY when the user explicitly asks to delete. Prefer transitioning to Done/Closed.",
+      'r = await client.jira.issues.delete("PROJ-1", dry_run=True)', docs={"delete_subtasks": "Also delete sub-tasks."}),
+    M("delete_comment", "jira.issue.comment.delete", "JiraIssueDeleter", "delete_comment", "key: str, comment_id: str", "None", "Delete a comment.",
+      "The user asks to remove a comment.", 'r = await client.jira.issues.delete_comment("PROJ-1", "10000", dry_run=True)'),
+    M("delete_attachment", "jira.issue.attachment.delete", "JiraIssueDeleter", "delete_attachment", "attachment_id: str", "None", "Delete an attachment.",
+      "The user asks to remove a file.", 'r = await client.jira.issues.delete_attachment("att1", dry_run=True)'),
+])
+extend("JiraProjectsClient", [
+    M("manage_version", "jira.project.version.manage", "JiraProjectWriter", "manage_version", "project: str, change: VersionChange", "Version",
+      "Create, update, release, archive or delete a project version.", "Release management.",
+      'r = await client.jira.projects.manage_version("PROJ", VersionChange(action="create", name="2.0"), dry_run=True)'),
+    M("create", "jira.project.create", "JiraAdmin", "create_project", "key: str, name: str, *, template: str, lead: str", "Project",
+      "Create a project (MANAGE access).", "The user asks for a new project and an admin enabled MANAGE.",
+      'r = await client.jira.projects.create("NEW", "New project", template="com.pyxis.greenhopper.jira:gh-simplified-agility-scrum", lead="ann@example.com", dry_run=True)',
+      docs={"template": "Project template key.", "lead": "Project lead (accountId, email or name)."}),
+    M("update", "jira.project.update", "JiraAdmin", "update_project", "key: str, changes: dict[str, Any]", "Project", "Update project settings (MANAGE access).",
+      "Renaming or reconfiguring a project.", 'r = await client.jira.projects.update("PROJ", {"name": "Renamed"}, dry_run=True)', docs={"changes": "Project fields to change."}, expand="changes"),
+])
+cls("JiraAdminClient", "Jira administration (MANAGE access; disabled by default).", "jira", [
+    M("workflows", "jira.admin.workflows.list", "JiraAdmin", "list_workflows", "*, project: str | None = None", "_List[Workflow]", "List workflows.",
+      "Understanding statuses and transitions.", "ws = await client.jira.admin.workflows()"),
+    M("workflow_editor_link", "jira.admin.workflow.editor_link", "JiraAdmin", "get_workflow_editor_link", "workflow_id: str", "str",
+      "URL of the workflow editor.", "The user wants to edit a workflow in the UI.", 'u = await client.jira.admin.workflow_editor_link("wf1")',
+      docs={"workflow_id": "Workflow id."}),
+    M("screen", "jira.admin.screen.get", "JiraAdmin", "get_screen", "screen_id: str", "Screen", "Fetch a screen.", "Inspecting field layout.",
+      'sc = await client.jira.admin.screen("1")', docs={"screen_id": "Screen id."}),
+    M("update_screen", "jira.admin.screen.update", "JiraAdmin", "update_screen", "screen_id: str, changes: dict[str, Any]", "Screen", "Update a screen (MANAGE access).",
+      "Changing field layout.", 'r = await client.jira.admin.update_screen("1", {"name": "Renamed"}, dry_run=True)', docs={"screen_id": "Screen id.", "changes": "Screen fields to change."}, expand="changes"),
+])
+extend("JiraAgileClient", [
+    M("manage_sprint", "jira.agile.sprint.manage", "JiraAgileWriter", "manage_sprint", "change: SprintChange", "Sprint",
+      "Create, update, start, close or delete a sprint.", "Sprint planning.", 'r = await client.jira.agile.manage_sprint(SprintChange(action="create", board_id=42, name="S8"), dry_run=True)'),
+    M("move_to_sprint", "jira.agile.issue.move_to_sprint", "JiraAgileWriter", "move_issues_to_sprint", "sprint_id: int, issue_keys: Sequence[str]", "None",
+      "Move issues into a sprint.", "Sprint planning.", 'r = await client.jira.agile.move_to_sprint(7, ["PROJ-1"], dry_run=True)'),
+    M("move_to_backlog", "jira.agile.issue.move_to_sprint", "JiraAgileWriter", "move_issues_to_backlog", "issue_keys: Sequence[str]", "None",
+      "Move issues back to the backlog.", "Sprint planning.", 'r = await client.jira.agile.move_to_backlog(["PROJ-1"], dry_run=True)'),
+    M("rank", "jira.agile.issue.rank", "JiraAgileWriter", "rank_issues", "issue_keys: Sequence[str], *, before: str | None = None, after: str | None = None", "None",
+      "Rank issues before or after another issue.", "Backlog ordering.", 'r = await client.jira.agile.rank(["PROJ-1"], before="PROJ-2", dry_run=True)',
+      docs={"before": "Rank before this issue key.", "after": "Rank after this issue key."}),
+    M("create_board", "jira.agile.board.create", "JiraAgileWriter", "create_board", "name: str, *, filter_id: int, board_type: str = \"scrum\"", "Board",
+      "Create a board.", "The user asks for a new board.", 'r = await client.jira.agile.create_board("Team", filter_id=10, dry_run=True)',
+      docs={"filter_id": "Saved filter id the board is based on.", "board_type": "scrum or kanban."}),
+])
+extend("JsmClient", [
+    M("create_request", "jsm.request.create", "JsmWriter", "create_request",
+      "service_desk_id: str, request_type_id: str, fields: dict[str, Any], *, on_behalf_of: str | None = None", "CustomerRequest", "Raise a customer request.",
+      "The user wants to open a support request.", 'r = await client.jsm.create_request("4", "r1", {"summary": "VPN"}, dry_run=True)',
+      docs={"request_type_id": "Request type id.", "fields": "Request fields by field id.", "on_behalf_of": "accountId of the customer."}),
+    M("add_comment", "jsm.request.comment.add", "JsmWriter", "add_request_comment", "key: str, body: BodyInput | str, *, public: bool", "RequestComment",
+      "Reply to a request (public) or add an internal note.", "Responding to a customer. `public` MUST be chosen deliberately.",
+      'r = await client.jsm.add_comment("OPS-1", "We are on it", public=True, dry_run=True)', docs={"public": "True = customer-visible reply; False = internal note."}),
+    M("transition", "jsm.request.transition", "JsmWriter", "transition_request", "key: str, transition: str, *, comment: BodyInput | str | None = None", "None",
+      "Move a request through its workflow.", "Resolving or reopening a request.", 'r = await client.jsm.transition("OPS-1", "Resolve", dry_run=True)',
+      docs={"comment": "Optional comment."}),
+    M("approve", "jsm.request.approve", "JsmWriter", "answer_approval", "key: str, approval_id: str, *, approve: bool", "None", "Approve or decline an approval step.",
+      "The user is an approver and asks for a decision.", 'r = await client.jsm.approve("OPS-1", "a1", approve=True, dry_run=True)',
+      docs={"approval_id": "Approval id.", "approve": "True to approve, False to decline."}),
+    M("add_customers", "jsm.customer.add", "JsmWriter", "add_customers", "service_desk_id: str, account_ids: list[str]", "None", "Add customers to a service desk.",
+      "Onboarding customers.", 'r = await client.jsm.add_customers("4", ["acc-1"], dry_run=True)', docs={"account_ids": "accountIds to add."}),
+])
+extend("ConfluenceContentClient", [
+    M("create", "confluence.content.create", "ConfluenceContentWriter", "create_content", "draft: ContentDraft", "Content", "Create a page, blog post or folder.",
+      "The user asks you to write a page.", 'r = await client.confluence.content.create(ContentDraft(title="Runbook", space="ENG", body="# Hi"), dry_run=True)',
+      docs={"draft": "ContentDraft: title, space key/id, Markdown body, optional parent_id, type (page/blogpost/folder)."}),
+    M("update", "confluence.content.update", "ConfluenceContentWriter", "update_content", "content_id: str, update: ContentUpdate", "Content",
+      "Update a page's title/body. Version-checked: fails with ConflictError if the page changed since you read it.",
+      "Editing an existing page. Fetch it first and pass its version.", 'r = await client.confluence.content.update("123", ContentUpdate(body="new", version=3), dry_run=True)',
+      raises="ConflictError: The page changed since you read it; re-fetch and retry."),
+    M("move", "confluence.content.move", "ConfluenceContentWriter", "move_content",
+      'content_id: str, *, target_parent_id: str | None = None, target_space: str | None = None, position: str = "append"', "Content", "Move a page under another page.",
+      "Reorganizing a space.", 'r = await client.confluence.content.move("123", target_parent_id="100", dry_run=True)',
+      docs={"target_parent_id": "New parent page id.", "target_space": "New space key.", "position": "append, before or after."}),
+    M("copy", "confluence.content.copy", "ConfluenceContentWriter", "copy_content", "content_id: str, *, destination_parent_id: str, title: str | None = None", "Content",
+      "Copy a page.", "Templates or duplication.", 'r = await client.confluence.content.copy("123", destination_parent_id="100", dry_run=True)',
+      docs={"destination_parent_id": "Parent page of the copy."}),
+    M("archive", "confluence.content.archive", "ConfluenceContentWriter", "archive_content", "content_ids: Sequence[str]", "None", "Archive pages.",
+      "Retiring pages without deleting them (preferred over delete).", 'r = await client.confluence.content.archive(["123"], dry_run=True)'),
+    M("unarchive", "confluence.content.unarchive", "ConfluenceContentWriter", "unarchive_content", "content_ids: Sequence[str]", "None", "Restore archived pages (MCP only).",
+      "Undoing an archive.", 'r = await client.confluence.content.unarchive(["123"], dry_run=True)'),
+    M("restore_version", "confluence.content.restore_version", "ConfluenceContentWriter", "restore_version", "content_id: str, version: int, *, message: str | None = None", "Content",
+      "Restore an older version of a page as the newest version.", "Reverting a bad edit.", 'r = await client.confluence.content.restore_version("123", 2, dry_run=True)',
+      docs={"version": "Version number to restore.", "message": "Version message."}),
+    M("set_status", "confluence.content.set_status", "ConfluenceContentWriter", "set_status", "content_id: str, status: str", "None", "Set a content status (MCP only).",
+      "Workflow states on pages.", 'r = await client.confluence.content.set_status("123", "Ready", dry_run=True)', docs={"status": "Status name."}),
+    M("delete", "confluence.content.delete", "ConfluenceContentDeleter", "delete_content", "content_id: str, *, type: ContentType = ContentType.PAGE, purge: bool = False", "None",
+      "Delete a page (moves it to trash unless purge=True).", "ONLY when the user explicitly asks. Prefer `archive`.", 'r = await client.confluence.content.delete("123", dry_run=True)'),
+])
+extend("ConfluenceCommentsClient", [
+    M("create", "confluence.comment.create", "ConfluenceContentWriter", "add_comment",
+      "content_id: str, body: BodyInput | str, *, parent_comment_id: str | None = None, inline_anchor: dict[str, Any] | None = None", "ConfluenceComment",
+      "Comment on a page (footer) or on a text selection (inline).", "The user asks you to comment.", 'r = await client.confluence.comments.create("123", "Thanks", dry_run=True)',
+      docs={"parent_comment_id": "Reply to this comment.", "inline_anchor": "Anchor for an inline comment (text selection)."}),
+    M("update", "confluence.comment.update", "ConfluenceContentWriter", "update_comment", "comment_id: str, body: BodyInput | str", "ConfluenceComment", "Edit a comment.",
+      "Correcting a comment.", 'r = await client.confluence.comments.update("fc1", "edited", dry_run=True)'),
+    M("resolve", "confluence.comment.resolve", "ConfluenceContentWriter", "resolve_comment", "comment_id: str, *, resolved: bool = True", "None", "Resolve or reopen an inline comment.",
+      "Closing a review thread.", 'r = await client.confluence.comments.resolve("ic1", dry_run=True)', docs={"resolved": "True to resolve, False to reopen."}),
+    M("delete", "confluence.comment.delete", "ConfluenceContentDeleter", "delete_comment", "comment_id: str", "None", "Delete a comment.", "The user asks to remove a comment.",
+      'r = await client.confluence.comments.delete("fc1", dry_run=True)'),
+])
+extend("ConfluenceAttachmentsClient", [
+    M("upload", "confluence.attachment.upload", "ConfluenceContentWriter", "upload_attachment", "content_id: str, file: Path | bytes, *, filename: str | None = None, comment: str | None = None",
+      "Attachment", "Upload a file to a page.", "The user asks to attach a file.", 'r = await client.confluence.attachments.upload("123", b"x", filename="a.txt", dry_run=True)',
+      docs={"comment": "Version comment."}),
+    M("delete", "confluence.attachment.delete", "ConfluenceContentDeleter", "delete_attachment", "attachment_id: str, *, purge: bool = False", "None", "Delete an attachment.",
+      "The user asks to remove a file.", 'r = await client.confluence.attachments.delete("cat1", dry_run=True)'),
+])
+extend("ConfluenceLabelsClient", [
+    M("add", "confluence.label.add", "ConfluenceContentWriter", "add_labels", "content_id: str, labels: Sequence[str]", "_List[Label]", "Add labels to a page.", "Classification.",
+      'r = await client.confluence.labels.add("123", ["runbook"], dry_run=True)'),
+    M("remove", "confluence.label.remove", "ConfluenceContentWriter", "remove_label", "content_id: str, label: str", "None", "Remove a label from a page.", "Reclassification.",
+      'r = await client.confluence.labels.remove("123", "runbook", dry_run=True)'),
+])
+extend("ConfluencePropertiesClient", [
+    M("set", "confluence.property.set", "ConfluenceContentWriter", "set_property", "content_id: str, key: str, value: Any", "None", "Set a content property.", "Storing app metadata.",
+      'r = await client.confluence.properties.set("123", "app.state", {"ok": True}, dry_run=True)'),
+])
+extend("ConfluenceTasksClient", [
+    M("set_status", "confluence.task.complete", "ConfluenceContentWriter", "set_task_status", "task_id: str, *, complete: bool", "Task", "Complete or reopen an inline task.",
+      "The user ticks off an action item.", 'r = await client.confluence.tasks.set_status("t1", complete=True, dry_run=True)', docs={"task_id": "Task id.", "complete": "True to complete."}),
+])
+extend("ConfluencePermissionsClient", [
+    M("set_restrictions", "confluence.permission.restrictions.set", "ConfluenceContentWriter", "set_restrictions", "content_id: str, restrictions: Restrictions", "None",
+      "Replace the read/update restrictions of a page.", "Locking down a page.", 'r = await client.confluence.permissions.set_restrictions("123", Restrictions(read_groups=["eng"]), dry_run=True)',
+      docs={"restrictions": "The full restriction set to apply."}),
+    M("add", "confluence.permission.add", "ConfluencePermissionWriter", "add_permissions", "content_id: str, grants: Sequence[dict[str, Any]]", "None", "Add restrictions.",
+      "Granting access to a restricted page.", 'r = await client.confluence.permissions.add("123", [{"operation": "read", "group": "eng"}], dry_run=True)'),
+    M("remove", "confluence.permission.remove", "ConfluencePermissionWriter", "remove_permissions", "content_id: str, grants: Sequence[dict[str, Any]]", "None", "Remove restrictions.",
+      "Revoking access.", 'r = await client.confluence.permissions.remove("123", [{"operation": "read", "group": "eng"}], dry_run=True)'),
+    M("replace", "confluence.permission.replace", "ConfluencePermissionWriter", "replace_permissions", "content_id: str, grants: Sequence[dict[str, Any]]", "None", "Replace all restrictions.",
+      "Resetting access.", 'r = await client.confluence.permissions.replace("123", [{"operation": "read", "group": "eng"}], dry_run=True)'),
+    M("set_public_link", "confluence.content.public_link.set", "ConfluencePermissionWriter", "set_public_link", "content_id: str, *, enabled: bool", "None",
+      "Enable or disable the public link of a page (MCP only).", "Sharing outside the org (be careful).", 'r = await client.confluence.permissions.set_public_link("123", enabled=False, dry_run=True)'),
+])
+extend("ConfluenceSpacesClient", [
+    M("create", "confluence.space.create", "ConfluenceSpaceWriter", "create_space", "key: str, name: str, *, description: str | None = None", "Space", "Create a space.",
+      "The user asks for a new space.", 'r = await client.confluence.spaces.create("NEW", "New space", dry_run=True)', docs={"description": "Plain-text description."}),
+    M("set_instructions", "confluence.space.instructions.set", "ConfluenceSpaceWriter", "set_space_instructions", "key_or_id: str, instructions: str", "None",
+      "Set agent instructions for a space (MCP only).", "Defining how agents should treat a space.", 'r = await client.confluence.spaces.set_instructions("ENG", "Be concise.", dry_run=True)',
+      docs={"instructions": "Instruction text."}),
+])
+extend("GraphClient", [
+    M("add_context", "graph.context.add", "TeamworkGraphWriter", "add_context", "ari_or_url: str, context: Mapping[str, Any]", "None", "Attach context to a graph entity (MCP only).",
+      "Recording relationships for later retrieval.", 'r = await client.graph.add_context("ari:cloud:jira::issue/10001", {"note": "x"}, dry_run=True)', docs={"context": "Context key/values."}),
+])
+
+
+cls("ConfluenceSocialClient", "Watching, starring and reacting on Confluence content.", "confluence", [
+    M("watch", "confluence.watch.content", "ConfluenceContentWriter", "watch",
+      "*, content_id: str | None = None, space_key: str | None = None, label: str | None = None, watch: bool = True", "None",
+      "Watch or unwatch a page, a space or a label.", "The user wants notifications.", 'r = await client.confluence.social.watch(content_id="123", dry_run=True)',
+      docs={"watch": "True to watch, False to stop."}),
+    M("star", "confluence.star.content", "ConfluenceContentWriter", "star", "*, content_id: str | None = None, space_key: str | None = None, star: bool = True", "None",
+      "Favourite or unfavourite a page or space (MCP only).", "The user wants a bookmark.", 'r = await client.confluence.social.star(content_id="123", dry_run=True)',
+      docs={"star": "True to star, False to unstar."}),
+    M("react", "confluence.reaction.add", "ConfluenceContentWriter", "add_reaction", "content_id: str, emoji: str", "None", "React to a page with an emoji (MCP only).",
+      "The user wants to acknowledge a page.", 'r = await client.confluence.social.react("123", "thumbsup", dry_run=True)'),
+])
+
+cls("ConfluenceSpecialClient", "MCP-only Confluence features: AI infographics and MAUI apps (Cloud; agent-interface).", "confluence", [
+    M("get_maui_app", "confluence.special.maui_app.get", "ConfluenceSpecialContent", "get_maui_app", "app_id: str", "dict[str, Any]", "Fetch a MAUI app definition.",
+      "Inspecting an existing MAUI app.", 'r = await client.confluence.special.get_maui_app("app1")', docs={"app_id": "MAUI app id."}),
+    M("create_infographic", "confluence.special.infographic.create", "ConfluenceSpecialContent", "create_infographic", "content_id: str, *, prompt: str", "dict[str, Any]",
+      "Generate an infographic for a page.", "The user asks for a visual summary of a page.", 'r = await client.confluence.special.create_infographic("123", prompt="Summarize", dry_run=True)',
+      docs={"prompt": "What the infographic should show."}),
+    M("edit_infographic", "confluence.special.infographic.edit", "ConfluenceSpecialContent", "edit_infographic", "content_id: str, infographic_id: str, *, prompt: str",
+      "dict[str, Any]", "Revise an infographic.", "Iterating on a generated infographic.", 'r = await client.confluence.special.edit_infographic("123", "inf1", prompt="Add totals", dry_run=True)',
+      docs={"infographic_id": "Infographic id."}),
+    M("create_maui_app", "confluence.special.maui_app.create", "ConfluenceSpecialContent", "create_maui_app", "content_id: str, *, spec: str", "dict[str, Any]",
+      "Create a MAUI app on a page.", "The user asks for an interactive app embedded in a page.", 'r = await client.confluence.special.create_maui_app("123", spec="counter", dry_run=True)',
+      docs={"spec": "Description of the app to build."}),
+    M("edit_maui_app", "confluence.special.maui_app.edit", "ConfluenceSpecialContent", "edit_maui_app", "app_id: str, *, spec: str", "dict[str, Any]", "Revise a MAUI app.",
+      "Iterating on an app.", 'r = await client.confluence.special.edit_maui_app("app1", spec="add reset", dry_run=True)', docs={"app_id": "MAUI app id."}),
+])
+
 TYPE_DOCS = {"Page": "Page", "list": "list"}
 
 
-def _param_docs(sig: str, extra: dict[str, str]) -> list[str]:
-    tree = ast.parse(f"def f({sig + (', ' if sig and not sig.rstrip().endswith('*') else '')}{'*, ' if '*' not in sig else ''}backend: BackendKind | str | None = None): pass")
+MISSING: set[str] = set()
+
+
+def _param_docs(sig: str, extra: dict[str, str], is_write: bool = False) -> list[str]:
+    dry = "dry_run: bool = False, " if is_write else ""
+    tree = ast.parse(f"def f({sig + (', ' if sig and not sig.rstrip().endswith('*') else '')}{'*, ' if '*' not in sig else ''}{dry}backend: BackendKind | str | None = None): pass")
     fn = tree.body[0]
     assert isinstance(fn, ast.FunctionDef)
     names = [a.arg for a in fn.args.args + fn.args.kwonlyargs]
     lines = []
     for nme in names:
         doc = extra.get(nme) or COMMON.get(nme)
-        assert doc, f"no doc for parameter {nme!r}"
+        if not doc:
+            MISSING.add(nme)
+            doc = "?"
         lines.append(f"{nme}: {doc}")
     return lines
 
 
+WRITE_ACCESS = {"WRITE", "DELETE", "MANAGE"}
+
+
 def gen_method(m: M) -> str:
     op = ops.get(m.op)
+    is_write = op.access.name in WRITE_ACCESS
     full_sig = m.sig
     if "*" not in full_sig:
         full_sig = (full_sig + ", " if full_sig else "") + "*"
-    sig = f"{full_sig}, backend: BackendKind | str | None = None"
+    sig = f"{full_sig}, " + ("dry_run: bool = False, " if is_write else "") + "backend: BackendKind | str | None = None"
     tree = ast.parse(f"def f({sig}): pass")
     fn = tree.body[0]
     assert isinstance(fn, ast.FunctionDef)
-    pos = [a.arg for a in fn.args.args]
+    pos = [a.arg for a in fn.args.args if a.arg != m.expand]
     kw = [a.arg for a in fn.args.kwonlyargs if a.arg != "backend"]
     call_args = ", ".join(pos)
-    call_kw = ", ".join(f"{k}={k}" for k in kw + ["backend"])
-    args_doc = "\n".join(f"    {line}" for line in _param_docs(m.sig, m.docs))
+    call_kw = ", ".join(([f"**{m.expand}"] if m.expand else []) + [f"{k}={k}" for k in kw + ["backend"]])
+    args_doc = "\n".join(f"    {line}" for line in _param_docs(m.sig, m.docs, is_write))
     doc = f"""{m.summary}
 
     When to use:
@@ -396,9 +665,9 @@ def gen_method(m: M) -> str:
         {m.ret}
 
     Raises:
-        {m.raises}
+        {m.raises}{chr(10) + "        PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined." if is_write else ""}
 
-    Access: {op.access.name}
+    Access: {op.access.name}{" (changes data; the user confirms; preview with dry_run=True)" if is_write else ""}
 
     Example:
         >>> {m.example}
@@ -407,7 +676,7 @@ def gen_method(m: M) -> str:
     wrapped = []
     for line in doc.split("\n"):
         wrapped.append(line)
-    ret = m.ret.replace("list[", "_List[")
+    ret = (m.ret + " | PlannedAction" if is_write else m.ret).replace("list[", "_List[")
     sig = sig.replace("list[", "_List[")
     return f'''    async def {m.name}(self, {sig}) -> {ret}:
         """{doc.lstrip()}
@@ -432,10 +701,11 @@ from pathlib import Path
 from typing import Any, Literal, cast
 
 from ..capabilities import BackendKind
-from ..models.common import Page, UserRef
-from ..models.confluence import (Attachment, AttachmentContent, ConfluenceComment, Content, ContentDiff, ContentVersion, Label,
+from ..models.common import BodyInput, Page, UserRef
+from ..policy import PlannedAction
+from ..models.confluence import (ContentDraft, ContentUpdate, Attachment, AttachmentContent, ConfluenceComment, Content, ContentDiff, ContentVersion, Label,
                                  Permissions, Restrictions, SearchHit, Space, Task, Template)
-from ..models.jira import (Board, BoardConfig, ChangelogEntry, Comment, Component, Dashboard, Epic, Field, Filter, Issue, IssueLink,
+from ..models.jira import (CreatedIssue, IssueDraft, IssueUpdate, SprintChange, VersionChange, Workflow, Screen, Board, BoardConfig, ChangelogEntry, Comment, Component, Dashboard, Epic, Field, Filter, Issue, IssueLink,
                            IssueType, JqlParseResult, Project, RemoteLink, ServerInfo, Sprint, Status, Transition, Version, Worklog)
 from ..models.jira import Attachment as JiraAttachment
 from ..models.jira import AttachmentContent as JiraAttachmentContent
@@ -444,7 +714,9 @@ from ..models.graph import GraphContext, GraphObject, SemanticHit
 from ..models.webhooks import RawResponse
 from ..protocols import (ConfluenceContentReader, ConfluenceSearcher, ConfluenceSpaceReader, ConfluenceTemplateReader, JiraAgileReader,
                          JiraIssueReader, JiraIssueSearcher, JiraJqlTools, JiraMetadataReader, JiraProjectReader, JiraUserDirectory,
-                         JsmReader, RawRequester, SemanticSearcher, TeamworkGraphReader)
+                         JsmReader, RawRequester, SemanticSearcher, TeamworkGraphReader, JiraIssueWriter, JiraIssueDeleter, JiraProjectWriter,
+                         JiraAdmin, JiraAgileWriter, JsmWriter, ConfluenceContentWriter, ConfluenceSpaceWriter, ConfluencePermissionWriter,
+                         ConfluenceContentDeleter, TeamworkGraphWriter, ConfluenceSpecialContent)
 from ..protocols.confluence import BodyFormat, ContentType
 from ._namespace import Namespace
 
@@ -457,6 +729,8 @@ _List = list
         if group == "jira" or group == "agile":
             pass
         (OUT / f"_generated_{group}.py").write_text(text + "\n", encoding="utf-8")
+    if MISSING:
+        raise SystemExit(f"missing parameter docs for: {sorted(MISSING)}")
     print("generated", ", ".join(f"_generated_{g}.py" for g in by_file))
 
 

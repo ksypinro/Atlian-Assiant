@@ -7,10 +7,11 @@ from pathlib import Path
 from typing import Any, Literal, cast
 
 from ..capabilities import BackendKind
-from ..models.common import Page, UserRef
-from ..models.confluence import (Attachment, AttachmentContent, ConfluenceComment, Content, ContentDiff, ContentVersion, Label,
+from ..models.common import BodyInput, Page, UserRef
+from ..policy import PlannedAction
+from ..models.confluence import (ContentDraft, ContentUpdate, Attachment, AttachmentContent, ConfluenceComment, Content, ContentDiff, ContentVersion, Label,
                                  Permissions, Restrictions, SearchHit, Space, Task, Template)
-from ..models.jira import (Board, BoardConfig, ChangelogEntry, Comment, Component, Dashboard, Epic, Field, Filter, Issue, IssueLink,
+from ..models.jira import (CreatedIssue, IssueDraft, IssueUpdate, SprintChange, VersionChange, Workflow, Screen, Board, BoardConfig, ChangelogEntry, Comment, Component, Dashboard, Epic, Field, Filter, Issue, IssueLink,
                            IssueType, JqlParseResult, Project, RemoteLink, ServerInfo, Sprint, Status, Transition, Version, Worklog)
 from ..models.jira import Attachment as JiraAttachment
 from ..models.jira import AttachmentContent as JiraAttachmentContent
@@ -19,7 +20,9 @@ from ..models.graph import GraphContext, GraphObject, SemanticHit
 from ..models.webhooks import RawResponse
 from ..protocols import (ConfluenceContentReader, ConfluenceSearcher, ConfluenceSpaceReader, ConfluenceTemplateReader, JiraAgileReader,
                          JiraIssueReader, JiraIssueSearcher, JiraJqlTools, JiraMetadataReader, JiraProjectReader, JiraUserDirectory,
-                         JsmReader, RawRequester, SemanticSearcher, TeamworkGraphReader)
+                         JsmReader, RawRequester, SemanticSearcher, TeamworkGraphReader, JiraIssueWriter, JiraIssueDeleter, JiraProjectWriter,
+                         JiraAdmin, JiraAgileWriter, JsmWriter, ConfluenceContentWriter, ConfluenceSpaceWriter, ConfluencePermissionWriter,
+                         ConfluenceContentDeleter, TeamworkGraphWriter, ConfluenceSpecialContent)
 from ..protocols.confluence import BodyFormat, ContentType
 from ._namespace import Namespace
 
@@ -29,7 +32,7 @@ _List = list
 class JsmClient(Namespace):
     """Jira Service Management: requests, SLAs, knowledge base, organizations."""
 
-    _OPS = {"jsm.info": "info", "jsm.service_desk.list": "service_desks", "jsm.request_type.list": "request_types", "jsm.request.list": "requests", "jsm.request.get": "request", "jsm.request.comments": "comments", "jsm.request.sla": "sla", "jsm.kb.search": "kb_search", "jsm.organization.list": "organizations", "jsm.customer.list": "customers"}
+    _OPS = {"jsm.info": "info", "jsm.service_desk.list": "service_desks", "jsm.request_type.list": "request_types", "jsm.request.list": "requests", "jsm.request.get": "request", "jsm.request.comments": "comments", "jsm.request.sla": "sla", "jsm.kb.search": "kb_search", "jsm.organization.list": "organizations", "jsm.customer.list": "customers", "jsm.request.create": "create_request", "jsm.request.comment.add": "add_comment", "jsm.request.transition": "transition", "jsm.request.approve": "approve", "jsm.customer.add": "add_customers"}
 
     async def info(self, *, backend: BackendKind | str | None = None) -> JsmInfo:
         """JSM version information.
@@ -136,7 +139,7 @@ class JsmClient(Namespace):
                 You know the request key.
 
             Args:
-                key: Issue key such as "PROJ-123" (case-insensitive) or the numeric issue id.
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
                 backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
 
             Returns:
@@ -159,7 +162,7 @@ class JsmClient(Namespace):
                 Reading the conversation.
 
             Args:
-                key: Issue key such as "PROJ-123" (case-insensitive) or the numeric issue id.
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
                 public_only: Only customer-visible comments.
                 limit: Maximum items in this page.
                 cursor: `next_cursor` from a previous page. Pass it back unchanged; never edit it.
@@ -185,7 +188,7 @@ class JsmClient(Namespace):
                 Checking breaches.
 
             Args:
-                key: Issue key such as "PROJ-123" (case-insensitive) or the numeric issue id.
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
                 backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
 
             Returns:
@@ -274,4 +277,139 @@ class JsmClient(Namespace):
                 >>> page = await client.jsm.customers("4")
         """
         return cast("Page[UserRef]", await self._call("jsm.customer.list", JsmReader, "list_customers", service_desk_id, limit=limit, cursor=cursor, backend=backend))
+
+    async def create_request(self, service_desk_id: str, request_type_id: str, fields: dict[str, Any], *, on_behalf_of: str | None = None, dry_run: bool = False, backend: BackendKind | str | None = None) -> CustomerRequest | PlannedAction:
+        """Raise a customer request.
+
+            When to use:
+                The user wants to open a support request.
+
+            Args:
+                service_desk_id: Numeric service desk id (from `jsm.service_desks`).
+                request_type_id: Request type id.
+                fields: Request fields by field id.
+                on_behalf_of: accountId of the customer.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                CustomerRequest
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jsm.create_request("4", "r1", {"summary": "VPN"}, dry_run=True)
+        """
+        return cast("CustomerRequest | PlannedAction", await self._call("jsm.request.create", JsmWriter, "create_request", service_desk_id, request_type_id, fields, on_behalf_of=on_behalf_of, dry_run=dry_run, backend=backend))
+
+    async def add_comment(self, key: str, body: BodyInput | str, *, public: bool, dry_run: bool = False, backend: BackendKind | str | None = None) -> RequestComment | PlannedAction:
+        """Reply to a request (public) or add an internal note.
+
+            When to use:
+                Responding to a customer. `public` MUST be chosen deliberately.
+
+            Args:
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
+                body: Text as Markdown (default), or a BodyInput for ADF / storage / plain.
+                public: True = customer-visible reply; False = internal note.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                RequestComment
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jsm.add_comment("OPS-1", "We are on it", public=True, dry_run=True)
+        """
+        return cast("RequestComment | PlannedAction", await self._call("jsm.request.comment.add", JsmWriter, "add_request_comment", key, body, public=public, dry_run=dry_run, backend=backend))
+
+    async def transition(self, key: str, transition: str, *, comment: BodyInput | str | None = None, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Move a request through its workflow.
+
+            When to use:
+                Resolving or reopening a request.
+
+            Args:
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
+                transition: Transition name or id (see `jira.issues.transitions`).
+                comment: Optional comment.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jsm.transition("OPS-1", "Resolve", dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("jsm.request.transition", JsmWriter, "transition_request", key, transition, comment=comment, dry_run=dry_run, backend=backend))
+
+    async def approve(self, key: str, approval_id: str, *, approve: bool, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Approve or decline an approval step.
+
+            When to use:
+                The user is an approver and asks for a decision.
+
+            Args:
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
+                approval_id: Approval id.
+                approve: True to approve, False to decline.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jsm.approve("OPS-1", "a1", approve=True, dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("jsm.request.approve", JsmWriter, "answer_approval", key, approval_id, approve=approve, dry_run=dry_run, backend=backend))
+
+    async def add_customers(self, service_desk_id: str, account_ids: _List[str], *, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Add customers to a service desk.
+
+            When to use:
+                Onboarding customers.
+
+            Args:
+                service_desk_id: Numeric service desk id (from `jsm.service_desks`).
+                account_ids: accountIds to add.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jsm.add_customers("4", ["acc-1"], dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("jsm.customer.add", JsmWriter, "add_customers", service_desk_id, account_ids, dry_run=dry_run, backend=backend))
 

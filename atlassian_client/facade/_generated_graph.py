@@ -7,10 +7,11 @@ from pathlib import Path
 from typing import Any, Literal, cast
 
 from ..capabilities import BackendKind
-from ..models.common import Page, UserRef
-from ..models.confluence import (Attachment, AttachmentContent, ConfluenceComment, Content, ContentDiff, ContentVersion, Label,
+from ..models.common import BodyInput, Page, UserRef
+from ..policy import PlannedAction
+from ..models.confluence import (ContentDraft, ContentUpdate, Attachment, AttachmentContent, ConfluenceComment, Content, ContentDiff, ContentVersion, Label,
                                  Permissions, Restrictions, SearchHit, Space, Task, Template)
-from ..models.jira import (Board, BoardConfig, ChangelogEntry, Comment, Component, Dashboard, Epic, Field, Filter, Issue, IssueLink,
+from ..models.jira import (CreatedIssue, IssueDraft, IssueUpdate, SprintChange, VersionChange, Workflow, Screen, Board, BoardConfig, ChangelogEntry, Comment, Component, Dashboard, Epic, Field, Filter, Issue, IssueLink,
                            IssueType, JqlParseResult, Project, RemoteLink, ServerInfo, Sprint, Status, Transition, Version, Worklog)
 from ..models.jira import Attachment as JiraAttachment
 from ..models.jira import AttachmentContent as JiraAttachmentContent
@@ -19,7 +20,9 @@ from ..models.graph import GraphContext, GraphObject, SemanticHit
 from ..models.webhooks import RawResponse
 from ..protocols import (ConfluenceContentReader, ConfluenceSearcher, ConfluenceSpaceReader, ConfluenceTemplateReader, JiraAgileReader,
                          JiraIssueReader, JiraIssueSearcher, JiraJqlTools, JiraMetadataReader, JiraProjectReader, JiraUserDirectory,
-                         JsmReader, RawRequester, SemanticSearcher, TeamworkGraphReader)
+                         JsmReader, RawRequester, SemanticSearcher, TeamworkGraphReader, JiraIssueWriter, JiraIssueDeleter, JiraProjectWriter,
+                         JiraAdmin, JiraAgileWriter, JsmWriter, ConfluenceContentWriter, ConfluenceSpaceWriter, ConfluencePermissionWriter,
+                         ConfluenceContentDeleter, TeamworkGraphWriter, ConfluenceSpecialContent)
 from ..protocols.confluence import BodyFormat, ContentType
 from ._namespace import Namespace
 
@@ -29,7 +32,7 @@ _List = list
 class GraphClient(Namespace):
     """Teamwork Graph context and Rovo semantic search (Cloud only; consume Rovo credits)."""
 
-    _OPS = {"graph.context": "context", "graph.object.get": "objects", "graph.search.semantic": "semantic_search"}
+    _OPS = {"graph.context": "context", "graph.object.get": "objects", "graph.search.semantic": "semantic_search", "graph.context.add": "add_context"}
 
     async def context(self, ari_or_url: str, *, max_items: int = 50, backend: BackendKind | str | None = None) -> GraphContext:
         """Connected context (related work, people, documents) for an Atlassian entity.
@@ -102,4 +105,30 @@ class GraphClient(Namespace):
                 >>> hits = await client.graph.semantic_search("how do we rotate keys")
         """
         return cast("_List[SemanticHit]", await self._call("graph.search.semantic", SemanticSearcher, "semantic_search", query, products=products, limit=limit, backend=backend))
+
+    async def add_context(self, ari_or_url: str, context: Mapping[str, Any], *, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Attach context to a graph entity (MCP only).
+
+            When to use:
+                Recording relationships for later retrieval.
+
+            Args:
+                ari_or_url: Atlassian Resource Identifier or the entity URL.
+                context: Context key/values.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.graph.add_context("ari:cloud:jira::issue/10001", {"note": "x"}, dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("graph.context.add", TeamworkGraphWriter, "add_context", ari_or_url, context, dry_run=dry_run, backend=backend))
 

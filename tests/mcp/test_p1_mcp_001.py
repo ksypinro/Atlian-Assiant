@@ -3,7 +3,7 @@ import httpx
 import pytest
 
 from atlassian_client import AtlassianConfig, BackendKind, ClientFactory, operations as ops
-from atlassian_client.backends.mcp import OP_TOOLS, McpBackend, McpToolResult, SdkMcpTransport
+from atlassian_client.backends.mcp import ALL_OP_TOOLS, OP_TOOLS, McpBackend, McpToolResult, SdkMcpTransport
 from atlassian_client.core.errors import (ConfigurationError, NoBackendAvailableError, NotFoundError, PermissionDeniedError,
                                           ServerError, UnsupportedOperationError)
 from atlassian_client.protocols import JiraIssueReader
@@ -15,11 +15,13 @@ pytestmark = [pytest.mark.layer_04, pytest.mark.anyio]
 
 
 def test_tool_map_covers_the_documented_read_search_tools_and_only_catalogued_operations():
-    assert set(OP_TOOLS) <= set(ops.CATALOG), sorted(set(OP_TOOLS) - set(ops.CATALOG))
+    assert set(ALL_OP_TOOLS) <= set(ops.CATALOG), sorted(set(ALL_OP_TOOLS) - set(ops.CATALOG))
+    assert set(OP_TOOLS) < set(ALL_OP_TOOLS)
     for tool in ("getJiraIssue", "searchJiraIssuesUsingJql", "getConfluenceContent", "searchConfluence", "getTeamworkGraphContext",
                  "listJiraBoards", "diffConfluenceContentVersions", "atlassianUserInfo", "getAccessibleAtlassianResources", "search"):
         assert tool in OP_TOOLS.values(), tool
     assert all(ops.CATALOG[o].access.value in ("read", "search") for o in OP_TOOLS)
+    assert any(ops.CATALOG[o].access.value in ("write", "delete", "manage") for o in ALL_OP_TOOLS)
 
 
 async def test_cloud_id_is_resolved_once_from_accessible_resources_and_injected_into_every_call():
@@ -45,7 +47,7 @@ async def test_configured_cloud_id_skips_discovery_and_unknown_site_is_a_clear_e
 
 async def test_live_tool_list_narrows_supported_operations_when_a_permission_group_is_disabled():
     mcp, t = make_mcp()
-    assert mcp.supported_operations() == frozenset(OP_TOOLS)               # before connecting: the static map
+    assert mcp.supported_operations() == frozenset(ALL_OP_TOOLS)               # before connecting: the static map
     t.enabled -= {"searchJiraIssuesUsingJql", "listJiraBoards"}
     live = await mcp.connect()
     assert "jira.issue.search" not in live and "jira.agile.board.list" not in live and "jira.issue.get" in live
@@ -133,7 +135,7 @@ def test_every_protocol_the_mcp_backend_claims_resolves_to_a_component():
                "TeamworkGraphReader", "SemanticSearcher", "IdentityReader"]
     for name in claimed:
         assert mcp.implementation_for(getattr(P, name)) is not None, name
-    assert mcp.implementation_for(P.JiraJqlTools) is None and mcp.implementation_for(P.JiraIssueWriter) is None
+    assert mcp.implementation_for(P.JiraJqlTools) is None and mcp.implementation_for(P.JiraIssueDeleter) is not None
 
 
 async def test_identity_through_mcp():

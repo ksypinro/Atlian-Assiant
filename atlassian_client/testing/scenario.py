@@ -118,7 +118,7 @@ RAW: dict[str, Any] = {
         "versions": {"123": [{"number": 3, "message": "tweak", "authorId": "acc-ann", "createdAt": "2026-09-01T10:00:00.000Z"},
                              {"number": 2, "message": "first", "authorId": "acc-ann", "createdAt": "2026-08-15T10:00:00.000Z"}]},
         "labels": {"123": [{"id": "1", "name": "runbook", "prefix": "global"}]},
-        "properties": {"123": [{"key": "app.state", "value": {"ok": True}}]},
+        "properties": {"123": [{"id": "p1", "key": "app.state", "value": {"ok": True}, "version": {"number": 1}}]},
         "footer_comments": {"123": [{"id": "fc1", "body": {"storage": {"value": "<p>Thanks</p>"}}, "version": {"authorId": "acc-bob", "createdAt": "2026-09-02T10:00:00.000Z"}}]},
         "inline_comments": {"123": [{"id": "ic1", "body": {"storage": {"value": "<p>Typo here</p>"}}, "resolutionStatus": "open",
                                      "version": {"authorId": "acc-bob", "createdAt": "2026-09-02T11:00:00.000Z"}}]},

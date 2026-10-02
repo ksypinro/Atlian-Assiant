@@ -79,7 +79,7 @@ async def run_example(client: Any, source: str) -> str | None:
     body = textwrap.indent(source if "await " in source or "async for" in source else source, "    ")
     code = f"async def __example(client):\n    _r = None\n{textwrap.indent('_r = ' + source if not _is_statement(source) else source, '    ')}\n    return _r\n"
     del body
-    ns: dict[str, Any] = {}
+    ns: dict[str, Any] = _example_namespace()
     try:
         exec(compile(code, "<example>", "exec"), ns)  # noqa: S102 - docstring examples we ship ourselves
         await ns["__example"](client)
@@ -88,6 +88,22 @@ async def run_example(client: Any, source: str) -> str | None:
     except Exception as exc:                         # TypeError, ValidationError, AttributeError ... = a wrong example
         return f"{type(exc).__name__}: {exc}"
     return None
+
+
+def _example_namespace() -> dict[str, Any]:
+    """Names examples may use unqualified: every public model class and the content-type enum."""
+    import pydantic
+
+    from atlassian_client import models  # noqa: F401
+    from atlassian_client.models import admin, common, confluence, graph, identity, jira, jsm, webhooks
+    from atlassian_client.protocols.confluence import ContentType
+
+    ns: dict[str, Any] = {"ContentType": ContentType}
+    for mod in (jira, jsm, confluence, graph, identity, admin, webhooks, common):
+        for name, obj in vars(mod).items():
+            if isinstance(obj, type) and issubclass(obj, pydantic.BaseModel):
+                ns.setdefault(name, obj)
+    return ns
 
 
 def _is_statement(source: str) -> bool:
@@ -158,7 +174,7 @@ def gen_agent_guide() -> str:
 
     client = _agent_client()
     rows = []
-    for spec in client.tools.list():
+    for spec in client.tools.list(include_hidden=True):
         d = client.tools.definition(spec.name)
         access = next((ln for ln in d["description"].splitlines() if ln.startswith("Access:")), "Access: READ")
         rows.append(f"| `{spec.name}` | {access.removeprefix('Access: ')} | {spec.when_to_use} |")
@@ -166,7 +182,8 @@ def gen_agent_guide() -> str:
     return f"""{GENERATED_NOTE}
 # AtlassianClient: guide for agents and LLMs
 
-You can read Jira and Confluence (and, when enabled, write to them) through {len(client.tools.list())} curated tools. The
+You can read Jira and Confluence (and, when enabled, write to them) through {len(client.tools.list(include_hidden=True))} curated tools
+(the tools you are actually offered depend on the access the user enabled; write and delete tools are hidden by default). The
 Python client behind them knows {len(ops.CATALOG)} operations; the tools below are the small, high-quality subset meant for you.
 
 ## 1. Start here
@@ -195,8 +212,10 @@ Search and list tools return ONE page. If the result says more is available, cal
 
 ## 4. Writes (when enabled)
 
-Writes are off by default. When enabled they need a human to confirm. Call the write tool with `dry_run=true` first, show the
-user the planned action, and only then call it again without `dry_run`. Never retry an action the user declined.
+Writes are off by default. When enabled they need a human to confirm. **Always call a write tool with `dry_run=true` first**: it
+returns the planned action and changes nothing. Show it to the user, and only then call it again without `dry_run`. Deletes and
+admin changes are always confirmed. Never retry an action the user declined; ask what they want instead. Prefer reversible
+actions (transition to Done, archive a page) over destructive ones (delete).
 
 ## 5. Names vs ids
 
@@ -255,7 +274,7 @@ def gen_llms() -> str:
     return f"""# AtlassianClient
 
 > One documented Python client over every way of reading, writing and watching Jira and Confluence (REST, MCP, CLIs, GraphQL,
-> browser, Data Lake, events). {len(ops.CATALOG)} operations; {len(client.tools.list())} curated LLM tools.
+> browser, Data Lake, events). {len(ops.CATALOG)} operations; {len(client.tools.list(include_hidden=True))} curated LLM tools.
 
 ## Docs
 

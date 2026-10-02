@@ -7,10 +7,11 @@ from pathlib import Path
 from typing import Any, Literal, cast
 
 from ..capabilities import BackendKind
-from ..models.common import Page, UserRef
-from ..models.confluence import (Attachment, AttachmentContent, ConfluenceComment, Content, ContentDiff, ContentVersion, Label,
+from ..models.common import BodyInput, Page, UserRef
+from ..policy import PlannedAction
+from ..models.confluence import (ContentDraft, ContentUpdate, Attachment, AttachmentContent, ConfluenceComment, Content, ContentDiff, ContentVersion, Label,
                                  Permissions, Restrictions, SearchHit, Space, Task, Template)
-from ..models.jira import (Board, BoardConfig, ChangelogEntry, Comment, Component, Dashboard, Epic, Field, Filter, Issue, IssueLink,
+from ..models.jira import (CreatedIssue, IssueDraft, IssueUpdate, SprintChange, VersionChange, Workflow, Screen, Board, BoardConfig, ChangelogEntry, Comment, Component, Dashboard, Epic, Field, Filter, Issue, IssueLink,
                            IssueType, JqlParseResult, Project, RemoteLink, ServerInfo, Sprint, Status, Transition, Version, Worklog)
 from ..models.jira import Attachment as JiraAttachment
 from ..models.jira import AttachmentContent as JiraAttachmentContent
@@ -19,7 +20,9 @@ from ..models.graph import GraphContext, GraphObject, SemanticHit
 from ..models.webhooks import RawResponse
 from ..protocols import (ConfluenceContentReader, ConfluenceSearcher, ConfluenceSpaceReader, ConfluenceTemplateReader, JiraAgileReader,
                          JiraIssueReader, JiraIssueSearcher, JiraJqlTools, JiraMetadataReader, JiraProjectReader, JiraUserDirectory,
-                         JsmReader, RawRequester, SemanticSearcher, TeamworkGraphReader)
+                         JsmReader, RawRequester, SemanticSearcher, TeamworkGraphReader, JiraIssueWriter, JiraIssueDeleter, JiraProjectWriter,
+                         JiraAdmin, JiraAgileWriter, JsmWriter, ConfluenceContentWriter, ConfluenceSpaceWriter, ConfluencePermissionWriter,
+                         ConfluenceContentDeleter, TeamworkGraphWriter, ConfluenceSpecialContent)
 from ..protocols.confluence import BodyFormat, ContentType
 from ._namespace import Namespace
 
@@ -29,7 +32,7 @@ _List = list
 class ConfluenceContentClient(Namespace):
     """Confluence content: pages, blog posts, whiteboards, databases, folders."""
 
-    _OPS = {"confluence.content.get": "get", "confluence.content.list": "list", "confluence.content.children": "children", "confluence.content.ancestors": "ancestors", "confluence.content.descendants": "descendants", "confluence.content.versions": "versions", "confluence.content.diff": "diff", "confluence.content.macros.resolve": "resolve_macros"}
+    _OPS = {"confluence.content.get": "get", "confluence.content.list": "list", "confluence.content.children": "children", "confluence.content.ancestors": "ancestors", "confluence.content.descendants": "descendants", "confluence.content.versions": "versions", "confluence.content.diff": "diff", "confluence.content.macros.resolve": "resolve_macros", "confluence.content.create": "create", "confluence.content.update": "update", "confluence.content.move": "move", "confluence.content.copy": "copy", "confluence.content.archive": "archive", "confluence.content.unarchive": "unarchive", "confluence.content.restore_version": "restore_version", "confluence.content.set_status": "set_status", "confluence.content.delete": "delete"}
 
     async def get(self, content_id: str, *, type: ContentType = ContentType.PAGE, body_format: BodyFormat = "markdown", version: int | None = None, backend: BackendKind | str | None = None) -> Content:
         """Fetch one piece of Confluence content by id.
@@ -234,6 +237,242 @@ class ConfluenceContentClient(Namespace):
         """
         return cast("Content", await self._call("confluence.content.macros.resolve", ConfluenceContentReader, "resolve_macros", content_id, backend=backend))
 
+    async def create(self, draft: ContentDraft, *, dry_run: bool = False, backend: BackendKind | str | None = None) -> Content | PlannedAction:
+        """Create a page, blog post or folder.
+
+            When to use:
+                The user asks you to write a page.
+
+            Args:
+                draft: ContentDraft: title, space key/id, Markdown body, optional parent_id, type (page/blogpost/folder).
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                Content
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.content.create(ContentDraft(title="Runbook", space="ENG", body="# Hi"), dry_run=True)
+        """
+        return cast("Content | PlannedAction", await self._call("confluence.content.create", ConfluenceContentWriter, "create_content", draft, dry_run=dry_run, backend=backend))
+
+    async def update(self, content_id: str, update: ContentUpdate, *, dry_run: bool = False, backend: BackendKind | str | None = None) -> Content | PlannedAction:
+        """Update a page's title/body. Version-checked: fails with ConflictError if the page changed since you read it.
+
+            When to use:
+                Editing an existing page. Fetch it first and pass its version.
+
+            Args:
+                content_id: Confluence content id (digits).
+                update: The changes to apply.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                Content
+
+            Raises:
+                ConflictError: The page changed since you read it; re-fetch and retry.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.content.update("123", ContentUpdate(body="new", version=3), dry_run=True)
+        """
+        return cast("Content | PlannedAction", await self._call("confluence.content.update", ConfluenceContentWriter, "update_content", content_id, update, dry_run=dry_run, backend=backend))
+
+    async def move(self, content_id: str, *, target_parent_id: str | None = None, target_space: str | None = None, position: str = "append", dry_run: bool = False, backend: BackendKind | str | None = None) -> Content | PlannedAction:
+        """Move a page under another page.
+
+            When to use:
+                Reorganizing a space.
+
+            Args:
+                content_id: Confluence content id (digits).
+                target_parent_id: New parent page id.
+                target_space: New space key.
+                position: append, before or after.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                Content
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.content.move("123", target_parent_id="100", dry_run=True)
+        """
+        return cast("Content | PlannedAction", await self._call("confluence.content.move", ConfluenceContentWriter, "move_content", content_id, target_parent_id=target_parent_id, target_space=target_space, position=position, dry_run=dry_run, backend=backend))
+
+    async def copy(self, content_id: str, *, destination_parent_id: str, title: str | None = None, dry_run: bool = False, backend: BackendKind | str | None = None) -> Content | PlannedAction:
+        """Copy a page.
+
+            When to use:
+                Templates or duplication.
+
+            Args:
+                content_id: Confluence content id (digits).
+                destination_parent_id: Parent page of the copy.
+                title: Title.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                Content
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.content.copy("123", destination_parent_id="100", dry_run=True)
+        """
+        return cast("Content | PlannedAction", await self._call("confluence.content.copy", ConfluenceContentWriter, "copy_content", content_id, destination_parent_id=destination_parent_id, title=title, dry_run=dry_run, backend=backend))
+
+    async def archive(self, content_ids: Sequence[str], *, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Archive pages.
+
+            When to use:
+                Retiring pages without deleting them (preferred over delete).
+
+            Args:
+                content_ids: Confluence content ids.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.content.archive(["123"], dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("confluence.content.archive", ConfluenceContentWriter, "archive_content", content_ids, dry_run=dry_run, backend=backend))
+
+    async def unarchive(self, content_ids: Sequence[str], *, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Restore archived pages (MCP only).
+
+            When to use:
+                Undoing an archive.
+
+            Args:
+                content_ids: Confluence content ids.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.content.unarchive(["123"], dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("confluence.content.unarchive", ConfluenceContentWriter, "unarchive_content", content_ids, dry_run=dry_run, backend=backend))
+
+    async def restore_version(self, content_id: str, version: int, *, message: str | None = None, dry_run: bool = False, backend: BackendKind | str | None = None) -> Content | PlannedAction:
+        """Restore an older version of a page as the newest version.
+
+            When to use:
+                Reverting a bad edit.
+
+            Args:
+                content_id: Confluence content id (digits).
+                version: Version number to restore.
+                message: Version message.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                Content
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.content.restore_version("123", 2, dry_run=True)
+        """
+        return cast("Content | PlannedAction", await self._call("confluence.content.restore_version", ConfluenceContentWriter, "restore_version", content_id, version, message=message, dry_run=dry_run, backend=backend))
+
+    async def set_status(self, content_id: str, status: str, *, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Set a content status (MCP only).
+
+            When to use:
+                Workflow states on pages.
+
+            Args:
+                content_id: Confluence content id (digits).
+                status: Status name.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.content.set_status("123", "Ready", dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("confluence.content.set_status", ConfluenceContentWriter, "set_status", content_id, status, dry_run=dry_run, backend=backend))
+
+    async def delete(self, content_id: str, *, type: ContentType = ContentType.PAGE, purge: bool = False, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Delete a page (moves it to trash unless purge=True).
+
+            When to use:
+                ONLY when the user explicitly asks. Prefer `archive`.
+
+            Args:
+                content_id: Confluence content id (digits).
+                type: Content type: page, blogpost, whiteboard, database, folder, embed or custom_content.
+                purge: Permanently delete instead of moving to trash.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: DELETE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.content.delete("123", dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("confluence.content.delete", ConfluenceContentDeleter, "delete_content", content_id, type=type, purge=purge, dry_run=dry_run, backend=backend))
+
 
 class ConfluenceSearchClient(Namespace):
     """Confluence CQL search."""
@@ -270,7 +509,7 @@ class ConfluenceSearchClient(Namespace):
 class ConfluenceSpacesClient(Namespace):
     """Confluence spaces."""
 
-    _OPS = {"confluence.space.list": "list", "confluence.space.get": "get", "confluence.space.personal": "personal", "confluence.space.instructions.get": "instructions", "confluence.space.permissions.list": "permissions"}
+    _OPS = {"confluence.space.list": "list", "confluence.space.get": "get", "confluence.space.personal": "personal", "confluence.space.instructions.get": "instructions", "confluence.space.permissions.list": "permissions", "confluence.space.create": "create", "confluence.space.instructions.set": "set_instructions"}
 
     async def list(self, *, keys: Sequence[str] = (), type: str | None = None, limit: int = 25, cursor: str | None = None, backend: BackendKind | str | None = None) -> Page[Space]:
         """List spaces you can see.
@@ -392,11 +631,64 @@ class ConfluenceSpacesClient(Namespace):
         """
         return cast("Page[dict[str, Any]]", await self._call("confluence.space.permissions.list", ConfluenceSpaceReader, "list_space_permissions", key_or_id, limit=limit, cursor=cursor, backend=backend))
 
+    async def create(self, key: str, name: str, *, description: str | None = None, dry_run: bool = False, backend: BackendKind | str | None = None) -> Space | PlannedAction:
+        """Create a space.
+
+            When to use:
+                The user asks for a new space.
+
+            Args:
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
+                name: Name.
+                description: Plain-text description.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                Space
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.spaces.create("NEW", "New space", dry_run=True)
+        """
+        return cast("Space | PlannedAction", await self._call("confluence.space.create", ConfluenceSpaceWriter, "create_space", key, name, description=description, dry_run=dry_run, backend=backend))
+
+    async def set_instructions(self, key_or_id: str, instructions: str, *, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Set agent instructions for a space (MCP only).
+
+            When to use:
+                Defining how agents should treat a space.
+
+            Args:
+                key_or_id: Space key ("ENG") or numeric space id.
+                instructions: Instruction text.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.spaces.set_instructions("ENG", "Be concise.", dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("confluence.space.instructions.set", ConfluenceSpaceWriter, "set_space_instructions", key_or_id, instructions, dry_run=dry_run, backend=backend))
+
 
 class ConfluenceCommentsClient(Namespace):
     """Confluence comments (footer and inline)."""
 
-    _OPS = {"confluence.comment.list": "list"}
+    _OPS = {"confluence.comment.list": "list", "confluence.comment.create": "create", "confluence.comment.update": "update", "confluence.comment.resolve": "resolve", "confluence.comment.delete": "delete"}
 
     async def list(self, content_id: str, *, kind: Literal["footer", "inline", "all"] = "all", limit: int = 25, cursor: str | None = None, backend: BackendKind | str | None = None) -> Page[ConfluenceComment]:
         """Comments on a page.
@@ -424,11 +716,116 @@ class ConfluenceCommentsClient(Namespace):
         """
         return cast("Page[ConfluenceComment]", await self._call("confluence.comment.list", ConfluenceContentReader, "list_comments", content_id, kind=kind, limit=limit, cursor=cursor, backend=backend))
 
+    async def create(self, content_id: str, body: BodyInput | str, *, parent_comment_id: str | None = None, inline_anchor: dict[str, Any] | None = None, dry_run: bool = False, backend: BackendKind | str | None = None) -> ConfluenceComment | PlannedAction:
+        """Comment on a page (footer) or on a text selection (inline).
+
+            When to use:
+                The user asks you to comment.
+
+            Args:
+                content_id: Confluence content id (digits).
+                body: Text as Markdown (default), or a BodyInput for ADF / storage / plain.
+                parent_comment_id: Reply to this comment.
+                inline_anchor: Anchor for an inline comment (text selection).
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                ConfluenceComment
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.comments.create("123", "Thanks", dry_run=True)
+        """
+        return cast("ConfluenceComment | PlannedAction", await self._call("confluence.comment.create", ConfluenceContentWriter, "add_comment", content_id, body, parent_comment_id=parent_comment_id, inline_anchor=inline_anchor, dry_run=dry_run, backend=backend))
+
+    async def update(self, comment_id: str, body: BodyInput | str, *, dry_run: bool = False, backend: BackendKind | str | None = None) -> ConfluenceComment | PlannedAction:
+        """Edit a comment.
+
+            When to use:
+                Correcting a comment.
+
+            Args:
+                comment_id: Comment id.
+                body: Text as Markdown (default), or a BodyInput for ADF / storage / plain.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                ConfluenceComment
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.comments.update("fc1", "edited", dry_run=True)
+        """
+        return cast("ConfluenceComment | PlannedAction", await self._call("confluence.comment.update", ConfluenceContentWriter, "update_comment", comment_id, body, dry_run=dry_run, backend=backend))
+
+    async def resolve(self, comment_id: str, *, resolved: bool = True, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Resolve or reopen an inline comment.
+
+            When to use:
+                Closing a review thread.
+
+            Args:
+                comment_id: Comment id.
+                resolved: True to resolve, False to reopen.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.comments.resolve("ic1", dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("confluence.comment.resolve", ConfluenceContentWriter, "resolve_comment", comment_id, resolved=resolved, dry_run=dry_run, backend=backend))
+
+    async def delete(self, comment_id: str, *, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Delete a comment.
+
+            When to use:
+                The user asks to remove a comment.
+
+            Args:
+                comment_id: Comment id.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: DELETE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.comments.delete("fc1", dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("confluence.comment.delete", ConfluenceContentDeleter, "delete_comment", comment_id, dry_run=dry_run, backend=backend))
+
 
 class ConfluenceAttachmentsClient(Namespace):
     """Confluence attachments."""
 
-    _OPS = {"confluence.attachment.list": "list", "confluence.attachment.download": "download"}
+    _OPS = {"confluence.attachment.list": "list", "confluence.attachment.download": "download", "confluence.attachment.upload": "upload", "confluence.attachment.delete": "delete"}
 
     async def list(self, content_id: str, *, limit: int = 25, cursor: str | None = None, backend: BackendKind | str | None = None) -> Page[Attachment]:
         """Attachment metadata of a page.
@@ -481,11 +878,65 @@ class ConfluenceAttachmentsClient(Namespace):
         """
         return cast("AttachmentContent", await self._call("confluence.attachment.download", ConfluenceContentReader, "download_attachment", attachment_id, dest=dest, max_bytes=max_bytes, extract_text=extract_text, backend=backend))
 
+    async def upload(self, content_id: str, file: Path | bytes, *, filename: str | None = None, comment: str | None = None, dry_run: bool = False, backend: BackendKind | str | None = None) -> Attachment | PlannedAction:
+        """Upload a file to a page.
+
+            When to use:
+                The user asks to attach a file.
+
+            Args:
+                content_id: Confluence content id (digits).
+                file: File path or raw bytes.
+                filename: File name to store (defaults to the path's name).
+                comment: Version comment.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                Attachment
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.attachments.upload("123", b"x", filename="a.txt", dry_run=True)
+        """
+        return cast("Attachment | PlannedAction", await self._call("confluence.attachment.upload", ConfluenceContentWriter, "upload_attachment", content_id, file, filename=filename, comment=comment, dry_run=dry_run, backend=backend))
+
+    async def delete(self, attachment_id: str, *, purge: bool = False, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Delete an attachment.
+
+            When to use:
+                The user asks to remove a file.
+
+            Args:
+                attachment_id: Attachment id.
+                purge: Permanently delete instead of moving to trash.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: DELETE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.attachments.delete("cat1", dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("confluence.attachment.delete", ConfluenceContentDeleter, "delete_attachment", attachment_id, purge=purge, dry_run=dry_run, backend=backend))
+
 
 class ConfluenceLabelsClient(Namespace):
     """Confluence labels."""
 
-    _OPS = {"confluence.label.list": "list"}
+    _OPS = {"confluence.label.list": "list", "confluence.label.add": "add", "confluence.label.remove": "remove"}
 
     async def list(self, content_id: str, *, backend: BackendKind | str | None = None) -> _List[Label]:
         """Labels on a page.
@@ -510,11 +961,63 @@ class ConfluenceLabelsClient(Namespace):
         """
         return cast("_List[Label]", await self._call("confluence.label.list", ConfluenceContentReader, "list_labels", content_id, backend=backend))
 
+    async def add(self, content_id: str, labels: Sequence[str], *, dry_run: bool = False, backend: BackendKind | str | None = None) -> _List[Label] | PlannedAction:
+        """Add labels to a page.
+
+            When to use:
+                Classification.
+
+            Args:
+                content_id: Confluence content id (digits).
+                labels: Label names.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                _List[Label]
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.labels.add("123", ["runbook"], dry_run=True)
+        """
+        return cast("_List[Label] | PlannedAction", await self._call("confluence.label.add", ConfluenceContentWriter, "add_labels", content_id, labels, dry_run=dry_run, backend=backend))
+
+    async def remove(self, content_id: str, label: str, *, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Remove a label from a page.
+
+            When to use:
+                Reclassification.
+
+            Args:
+                content_id: Confluence content id (digits).
+                label: Label name.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.labels.remove("123", "runbook", dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("confluence.label.remove", ConfluenceContentWriter, "remove_label", content_id, label, dry_run=dry_run, backend=backend))
+
 
 class ConfluencePropertiesClient(Namespace):
     """Confluence content properties."""
 
-    _OPS = {"confluence.property.get": "get"}
+    _OPS = {"confluence.property.get": "get", "confluence.property.set": "set"}
 
     async def get(self, content_id: str, *, backend: BackendKind | str | None = None) -> dict[str, Any]:
         """All properties of a page.
@@ -539,11 +1042,38 @@ class ConfluencePropertiesClient(Namespace):
         """
         return cast("dict[str, Any]", await self._call("confluence.property.get", ConfluenceContentReader, "get_properties", content_id, backend=backend))
 
+    async def set(self, content_id: str, key: str, value: Any, *, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Set a content property.
+
+            When to use:
+                Storing app metadata.
+
+            Args:
+                content_id: Confluence content id (digits).
+                key: Key (e.g. "PROJ-123" for issues, "PROJ" for projects).
+                value: JSON-serializable value.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.properties.set("123", "app.state", {"ok": True}, dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("confluence.property.set", ConfluenceContentWriter, "set_property", content_id, key, value, dry_run=dry_run, backend=backend))
+
 
 class ConfluenceTasksClient(Namespace):
     """Confluence inline tasks."""
 
-    _OPS = {"confluence.task.list": "list"}
+    _OPS = {"confluence.task.list": "list", "confluence.task.complete": "set_status"}
 
     async def list(self, *, space_id: str | None = None, content_id: str | None = None, status: Literal["complete", "incomplete"] | None = None, limit: int = 25, cursor: str | None = None, backend: BackendKind | str | None = None) -> Page[Task]:
         """Inline tasks in a space or page.
@@ -572,11 +1102,37 @@ class ConfluenceTasksClient(Namespace):
         """
         return cast("Page[Task]", await self._call("confluence.task.list", ConfluenceContentReader, "list_tasks", space_id=space_id, content_id=content_id, status=status, limit=limit, cursor=cursor, backend=backend))
 
+    async def set_status(self, task_id: str, *, complete: bool, dry_run: bool = False, backend: BackendKind | str | None = None) -> Task | PlannedAction:
+        """Complete or reopen an inline task.
+
+            When to use:
+                The user ticks off an action item.
+
+            Args:
+                task_id: Task id.
+                complete: True to complete.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                Task
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.tasks.set_status("t1", complete=True, dry_run=True)
+        """
+        return cast("Task | PlannedAction", await self._call("confluence.task.complete", ConfluenceContentWriter, "set_task_status", task_id, complete=complete, dry_run=dry_run, backend=backend))
+
 
 class ConfluencePermissionsClient(Namespace):
     """Confluence permissions and restrictions."""
 
-    _OPS = {"confluence.permission.get": "permissions", "confluence.permission.restrictions.get": "restrictions"}
+    _OPS = {"confluence.permission.get": "permissions", "confluence.permission.restrictions.get": "restrictions", "confluence.permission.restrictions.set": "set_restrictions", "confluence.permission.add": "add", "confluence.permission.remove": "remove", "confluence.permission.replace": "replace", "confluence.content.public_link.set": "set_public_link"}
 
     async def permissions(self, content_id: str, *, backend: BackendKind | str | None = None) -> Permissions:
         """What the current user may do with a page.
@@ -623,6 +1179,136 @@ class ConfluencePermissionsClient(Namespace):
                 >>> r = await client.confluence.permissions.restrictions("123456")
         """
         return cast("Restrictions", await self._call("confluence.permission.restrictions.get", ConfluenceContentReader, "get_restrictions", content_id, backend=backend))
+
+    async def set_restrictions(self, content_id: str, restrictions: Restrictions, *, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Replace the read/update restrictions of a page.
+
+            When to use:
+                Locking down a page.
+
+            Args:
+                content_id: Confluence content id (digits).
+                restrictions: The full restriction set to apply.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.permissions.set_restrictions("123", Restrictions(read_groups=["eng"]), dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("confluence.permission.restrictions.set", ConfluenceContentWriter, "set_restrictions", content_id, restrictions, dry_run=dry_run, backend=backend))
+
+    async def add(self, content_id: str, grants: Sequence[dict[str, Any]], *, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Add restrictions.
+
+            When to use:
+                Granting access to a restricted page.
+
+            Args:
+                content_id: Confluence content id (digits).
+                grants: Grants like {"operation": "read", "group": "eng"} or {"operation": "update", "user": accountId}.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.permissions.add("123", [{"operation": "read", "group": "eng"}], dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("confluence.permission.add", ConfluencePermissionWriter, "add_permissions", content_id, grants, dry_run=dry_run, backend=backend))
+
+    async def remove(self, content_id: str, grants: Sequence[dict[str, Any]], *, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Remove restrictions.
+
+            When to use:
+                Revoking access.
+
+            Args:
+                content_id: Confluence content id (digits).
+                grants: Grants like {"operation": "read", "group": "eng"} or {"operation": "update", "user": accountId}.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.permissions.remove("123", [{"operation": "read", "group": "eng"}], dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("confluence.permission.remove", ConfluencePermissionWriter, "remove_permissions", content_id, grants, dry_run=dry_run, backend=backend))
+
+    async def replace(self, content_id: str, grants: Sequence[dict[str, Any]], *, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Replace all restrictions.
+
+            When to use:
+                Resetting access.
+
+            Args:
+                content_id: Confluence content id (digits).
+                grants: Grants like {"operation": "read", "group": "eng"} or {"operation": "update", "user": accountId}.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.permissions.replace("123", [{"operation": "read", "group": "eng"}], dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("confluence.permission.replace", ConfluencePermissionWriter, "replace_permissions", content_id, grants, dry_run=dry_run, backend=backend))
+
+    async def set_public_link(self, content_id: str, *, enabled: bool, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Enable or disable the public link of a page (MCP only).
+
+            When to use:
+                Sharing outside the org (be careful).
+
+            Args:
+                content_id: Confluence content id (digits).
+                enabled: True to enable, False to disable.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.permissions.set_public_link("123", enabled=False, dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("confluence.content.public_link.set", ConfluencePermissionWriter, "set_public_link", content_id, enabled=enabled, dry_run=dry_run, backend=backend))
 
 
 class ConfluenceTemplatesClient(Namespace):
@@ -675,4 +1361,225 @@ class ConfluenceTemplatesClient(Namespace):
                 >>> tpl = await client.confluence.templates.get("tpl1")
         """
         return cast("Template", await self._call("confluence.template.get", ConfluenceTemplateReader, "get_template", template_id, backend=backend))
+
+
+class ConfluenceSocialClient(Namespace):
+    """Watching, starring and reacting on Confluence content."""
+
+    _OPS = {"confluence.watch.content": "watch", "confluence.star.content": "star", "confluence.reaction.add": "react"}
+
+    async def watch(self, *, content_id: str | None = None, space_key: str | None = None, label: str | None = None, watch: bool = True, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Watch or unwatch a page, a space or a label.
+
+            When to use:
+                The user wants notifications.
+
+            Args:
+                content_id: Confluence content id (digits).
+                space_key: Confluence space key.
+                label: Label name.
+                watch: True to watch, False to stop.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.social.watch(content_id="123", dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("confluence.watch.content", ConfluenceContentWriter, "watch", content_id=content_id, space_key=space_key, label=label, watch=watch, dry_run=dry_run, backend=backend))
+
+    async def star(self, *, content_id: str | None = None, space_key: str | None = None, star: bool = True, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Favourite or unfavourite a page or space (MCP only).
+
+            When to use:
+                The user wants a bookmark.
+
+            Args:
+                content_id: Confluence content id (digits).
+                space_key: Confluence space key.
+                star: True to star, False to unstar.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.social.star(content_id="123", dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("confluence.star.content", ConfluenceContentWriter, "star", content_id=content_id, space_key=space_key, star=star, dry_run=dry_run, backend=backend))
+
+    async def react(self, content_id: str, emoji: str, *, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """React to a page with an emoji (MCP only).
+
+            When to use:
+                The user wants to acknowledge a page.
+
+            Args:
+                content_id: Confluence content id (digits).
+                emoji: Emoji name.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.social.react("123", "thumbsup", dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("confluence.reaction.add", ConfluenceContentWriter, "add_reaction", content_id, emoji, dry_run=dry_run, backend=backend))
+
+
+class ConfluenceSpecialClient(Namespace):
+    """MCP-only Confluence features: AI infographics and MAUI apps (Cloud; agent-interface)."""
+
+    _OPS = {"confluence.special.maui_app.get": "get_maui_app", "confluence.special.infographic.create": "create_infographic", "confluence.special.infographic.edit": "edit_infographic", "confluence.special.maui_app.create": "create_maui_app", "confluence.special.maui_app.edit": "edit_maui_app"}
+
+    async def get_maui_app(self, app_id: str, *, backend: BackendKind | str | None = None) -> dict[str, Any]:
+        """Fetch a MAUI app definition.
+
+            When to use:
+                Inspecting an existing MAUI app.
+
+            Args:
+                app_id: MAUI app id.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                dict[str, Any]
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+
+            Access: READ
+
+            Example:
+                >>> r = await client.confluence.special.get_maui_app("app1")
+        """
+        return cast("dict[str, Any]", await self._call("confluence.special.maui_app.get", ConfluenceSpecialContent, "get_maui_app", app_id, backend=backend))
+
+    async def create_infographic(self, content_id: str, *, prompt: str, dry_run: bool = False, backend: BackendKind | str | None = None) -> dict[str, Any] | PlannedAction:
+        """Generate an infographic for a page.
+
+            When to use:
+                The user asks for a visual summary of a page.
+
+            Args:
+                content_id: Confluence content id (digits).
+                prompt: What the infographic should show.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                dict[str, Any]
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.special.create_infographic("123", prompt="Summarize", dry_run=True)
+        """
+        return cast("dict[str, Any] | PlannedAction", await self._call("confluence.special.infographic.create", ConfluenceSpecialContent, "create_infographic", content_id, prompt=prompt, dry_run=dry_run, backend=backend))
+
+    async def edit_infographic(self, content_id: str, infographic_id: str, *, prompt: str, dry_run: bool = False, backend: BackendKind | str | None = None) -> dict[str, Any] | PlannedAction:
+        """Revise an infographic.
+
+            When to use:
+                Iterating on a generated infographic.
+
+            Args:
+                content_id: Confluence content id (digits).
+                infographic_id: Infographic id.
+                prompt: What it should show or do.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                dict[str, Any]
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.special.edit_infographic("123", "inf1", prompt="Add totals", dry_run=True)
+        """
+        return cast("dict[str, Any] | PlannedAction", await self._call("confluence.special.infographic.edit", ConfluenceSpecialContent, "edit_infographic", content_id, infographic_id, prompt=prompt, dry_run=dry_run, backend=backend))
+
+    async def create_maui_app(self, content_id: str, *, spec: str, dry_run: bool = False, backend: BackendKind | str | None = None) -> dict[str, Any] | PlannedAction:
+        """Create a MAUI app on a page.
+
+            When to use:
+                The user asks for an interactive app embedded in a page.
+
+            Args:
+                content_id: Confluence content id (digits).
+                spec: Description of the app to build.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                dict[str, Any]
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.special.create_maui_app("123", spec="counter", dry_run=True)
+        """
+        return cast("dict[str, Any] | PlannedAction", await self._call("confluence.special.maui_app.create", ConfluenceSpecialContent, "create_maui_app", content_id, spec=spec, dry_run=dry_run, backend=backend))
+
+    async def edit_maui_app(self, app_id: str, *, spec: str, dry_run: bool = False, backend: BackendKind | str | None = None) -> dict[str, Any] | PlannedAction:
+        """Revise a MAUI app.
+
+            When to use:
+                Iterating on an app.
+
+            Args:
+                app_id: MAUI app id.
+                spec: Description of the app to build.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                dict[str, Any]
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.confluence.special.edit_maui_app("app1", spec="add reset", dry_run=True)
+        """
+        return cast("dict[str, Any] | PlannedAction", await self._call("confluence.special.maui_app.edit", ConfluenceSpecialContent, "edit_maui_app", app_id, spec=spec, dry_run=dry_run, backend=backend))
 

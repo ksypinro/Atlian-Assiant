@@ -10,13 +10,16 @@ from ...core.services import CoreServices
 from ...factory import Availability
 from ...protocols.base import BackendHealth
 from .agile import AgileRest
+from .agile_write import AgileWriteRest
 from .confluence import ConfluenceRest
+from .confluence_write import ConfluenceWriteRest
 from .identity import IdentityRest, RawRest
 from .jira import JiraRest
+from .jira_write import JiraWriteRest
 from .jsm import JsmRest
+from .jsm_write import JsmWriteRest
 
-# Operations implemented by this backend in P0 (read + search). Writers are added in P2.
-SUPPORTED: frozenset[str] = frozenset({
+READ_SUPPORTED: frozenset[str] = frozenset({
     "jira.issue.get", "jira.issue.search", "jira.issue.count", "jira.issue.comments.list", "jira.issue.changelog.list",
     "jira.issue.worklogs.list", "jira.issue.transitions.list", "jira.issue.links.list", "jira.issue.remote_links.list",
     "jira.issue.attachments.list", "jira.issue.attachment.download", "jira.issue.watchers.list", "jira.issue.property.get",
@@ -42,6 +45,26 @@ SUPPORTED: frozenset[str] = frozenset({
     "identity.whoami", "identity.accessible_resources", "raw.request", "raw.paginate",
 })
 
+#: write / delete / manage operations (P2). Operations with no REST endpoint (hierarchy conversion, unarchive, star,
+#: reactions, public links, space instructions, content status) are deliberately absent: MCP serves them.
+WRITE_SUPPORTED: frozenset[str] = frozenset({
+    "jira.issue.create", "jira.issue.bulk_create", "jira.issue.edit", "jira.issue.assign", "jira.issue.transition", "jira.issue.comment.add",
+    "jira.issue.comment.edit", "jira.issue.worklog.add", "jira.issue.link.create", "jira.issue.remote_link.create",
+    "jira.issue.attachment.upload", "jira.issue.watch", "jira.issue.property.set", "jira.issue.delete", "jira.issue.comment.delete",
+    "jira.issue.attachment.delete", "jira.project.version.manage", "jira.project.create", "jira.project.update",
+    "jira.admin.workflows.list", "jira.admin.workflow.editor_link", "jira.admin.screen.get", "jira.admin.screen.update",
+    "jira.agile.sprint.manage", "jira.agile.issue.move_to_sprint", "jira.agile.issue.rank", "jira.agile.board.create",
+    "jsm.request.create", "jsm.request.comment.add", "jsm.request.transition", "jsm.request.approve", "jsm.customer.add",
+    "confluence.content.create", "confluence.content.update", "confluence.content.move", "confluence.content.copy",
+    "confluence.content.archive", "confluence.content.restore_version", "confluence.content.delete",
+    "confluence.label.add", "confluence.label.remove", "confluence.comment.create", "confluence.comment.update",
+    "confluence.comment.resolve", "confluence.comment.delete", "confluence.attachment.upload", "confluence.attachment.delete",
+    "confluence.property.set", "confluence.permission.restrictions.set", "confluence.permission.add", "confluence.permission.remove",
+    "confluence.permission.replace", "confluence.task.complete", "confluence.task.reopen", "confluence.watch.content",
+    "confluence.watch.space", "confluence.watch.label", "confluence.space.create",
+})
+SUPPORTED: frozenset[str] = READ_SUPPORTED | WRITE_SUPPORTED
+
 
 class RestBackend:
     """Cloud REST: Jira Platform v3, Jira Software, JSM, Confluence v2 + v1/CQL, identity and raw requests.
@@ -61,7 +84,12 @@ class RestBackend:
         self.confluence = ConfluenceRest(transport)
         self.identity = IdentityRest(transport)
         self.raw = RawRest(transport)
-        self._parts: tuple[object, ...] = (self.jira, self.agile, self.jsm, self.confluence, self.identity, self.raw)
+        self.jira_write = JiraWriteRest(transport, self.jira)
+        self.agile_write = AgileWriteRest(transport)
+        self.jsm_write = JsmWriteRest(transport)
+        self.confluence_write = ConfluenceWriteRest(transport, self.confluence)
+        self._parts: tuple[object, ...] = (self.jira, self.agile, self.jsm, self.confluence, self.identity, self.raw, self.jira_write,
+                                           self.agile_write, self.jsm_write, self.confluence_write)
 
     def implementation_for(self, protocol: type) -> object | None:
         return next((p for p in self._parts if isinstance(p, protocol)), None)

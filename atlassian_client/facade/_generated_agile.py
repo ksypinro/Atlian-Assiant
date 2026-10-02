@@ -7,10 +7,11 @@ from pathlib import Path
 from typing import Any, Literal, cast
 
 from ..capabilities import BackendKind
-from ..models.common import Page, UserRef
-from ..models.confluence import (Attachment, AttachmentContent, ConfluenceComment, Content, ContentDiff, ContentVersion, Label,
+from ..models.common import BodyInput, Page, UserRef
+from ..policy import PlannedAction
+from ..models.confluence import (ContentDraft, ContentUpdate, Attachment, AttachmentContent, ConfluenceComment, Content, ContentDiff, ContentVersion, Label,
                                  Permissions, Restrictions, SearchHit, Space, Task, Template)
-from ..models.jira import (Board, BoardConfig, ChangelogEntry, Comment, Component, Dashboard, Epic, Field, Filter, Issue, IssueLink,
+from ..models.jira import (CreatedIssue, IssueDraft, IssueUpdate, SprintChange, VersionChange, Workflow, Screen, Board, BoardConfig, ChangelogEntry, Comment, Component, Dashboard, Epic, Field, Filter, Issue, IssueLink,
                            IssueType, JqlParseResult, Project, RemoteLink, ServerInfo, Sprint, Status, Transition, Version, Worklog)
 from ..models.jira import Attachment as JiraAttachment
 from ..models.jira import AttachmentContent as JiraAttachmentContent
@@ -19,7 +20,9 @@ from ..models.graph import GraphContext, GraphObject, SemanticHit
 from ..models.webhooks import RawResponse
 from ..protocols import (ConfluenceContentReader, ConfluenceSearcher, ConfluenceSpaceReader, ConfluenceTemplateReader, JiraAgileReader,
                          JiraIssueReader, JiraIssueSearcher, JiraJqlTools, JiraMetadataReader, JiraProjectReader, JiraUserDirectory,
-                         JsmReader, RawRequester, SemanticSearcher, TeamworkGraphReader)
+                         JsmReader, RawRequester, SemanticSearcher, TeamworkGraphReader, JiraIssueWriter, JiraIssueDeleter, JiraProjectWriter,
+                         JiraAdmin, JiraAgileWriter, JsmWriter, ConfluenceContentWriter, ConfluenceSpaceWriter, ConfluencePermissionWriter,
+                         ConfluenceContentDeleter, TeamworkGraphWriter, ConfluenceSpecialContent)
 from ..protocols.confluence import BodyFormat, ContentType
 from ._namespace import Namespace
 
@@ -29,7 +32,7 @@ _List = list
 class JiraAgileClient(Namespace):
     """Jira Software boards, sprints, backlog and epics."""
 
-    _OPS = {"jira.agile.board.list": "boards", "jira.agile.board.get": "board", "jira.agile.board.config": "board_config", "jira.agile.board.issues": "board_issues", "jira.agile.sprint.list": "sprints", "jira.agile.sprint.get": "sprint", "jira.agile.sprint.issues": "sprint_issues", "jira.agile.backlog.list": "backlog", "jira.agile.epic.list": "epics"}
+    _OPS = {"jira.agile.board.list": "boards", "jira.agile.board.get": "board", "jira.agile.board.config": "board_config", "jira.agile.board.issues": "board_issues", "jira.agile.sprint.list": "sprints", "jira.agile.sprint.get": "sprint", "jira.agile.sprint.issues": "sprint_issues", "jira.agile.backlog.list": "backlog", "jira.agile.epic.list": "epics", "jira.agile.sprint.manage": "manage_sprint", "jira.agile.issue.move_to_sprint": "move_to_sprint", "jira.agile.issue.move_to_sprint": "move_to_backlog", "jira.agile.issue.rank": "rank", "jira.agile.board.create": "create_board"}
 
     async def boards(self, *, project: str | None = None, name: str | None = None, limit: int = 50, cursor: str | None = None, backend: BackendKind | str | None = None) -> Page[Board]:
         """List boards.
@@ -253,4 +256,134 @@ class JiraAgileClient(Namespace):
                 >>> page = await client.jira.agile.epics(42)
         """
         return cast("Page[Epic]", await self._call("jira.agile.epic.list", JiraAgileReader, "list_epics", board_id, limit=limit, cursor=cursor, backend=backend))
+
+    async def manage_sprint(self, change: SprintChange, *, dry_run: bool = False, backend: BackendKind | str | None = None) -> Sprint | PlannedAction:
+        """Create, update, start, close or delete a sprint.
+
+            When to use:
+                Sprint planning.
+
+            Args:
+                change: The change to apply.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                Sprint
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jira.agile.manage_sprint(SprintChange(action="create", board_id=42, name="S8"), dry_run=True)
+        """
+        return cast("Sprint | PlannedAction", await self._call("jira.agile.sprint.manage", JiraAgileWriter, "manage_sprint", change, dry_run=dry_run, backend=backend))
+
+    async def move_to_sprint(self, sprint_id: int, issue_keys: Sequence[str], *, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Move issues into a sprint.
+
+            When to use:
+                Sprint planning.
+
+            Args:
+                sprint_id: Numeric sprint id.
+                issue_keys: Issue keys.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jira.agile.move_to_sprint(7, ["PROJ-1"], dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("jira.agile.issue.move_to_sprint", JiraAgileWriter, "move_issues_to_sprint", sprint_id, issue_keys, dry_run=dry_run, backend=backend))
+
+    async def move_to_backlog(self, issue_keys: Sequence[str], *, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Move issues back to the backlog.
+
+            When to use:
+                Sprint planning.
+
+            Args:
+                issue_keys: Issue keys.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jira.agile.move_to_backlog(["PROJ-1"], dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("jira.agile.issue.move_to_sprint", JiraAgileWriter, "move_issues_to_backlog", issue_keys, dry_run=dry_run, backend=backend))
+
+    async def rank(self, issue_keys: Sequence[str], *, before: str | None = None, after: str | None = None, dry_run: bool = False, backend: BackendKind | str | None = None) -> None | PlannedAction:
+        """Rank issues before or after another issue.
+
+            When to use:
+                Backlog ordering.
+
+            Args:
+                issue_keys: Issue keys.
+                before: Rank before this issue key.
+                after: Rank after this issue key.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                None
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jira.agile.rank(["PROJ-1"], before="PROJ-2", dry_run=True)
+        """
+        return cast("None | PlannedAction", await self._call("jira.agile.issue.rank", JiraAgileWriter, "rank_issues", issue_keys, before=before, after=after, dry_run=dry_run, backend=backend))
+
+    async def create_board(self, name: str, *, filter_id: int, board_type: str = "scrum", dry_run: bool = False, backend: BackendKind | str | None = None) -> Board | PlannedAction:
+        """Create a board.
+
+            When to use:
+                The user asks for a new board.
+
+            Args:
+                name: Name.
+                filter_id: Saved filter id the board is based on.
+                board_type: scrum or kanban.
+                dry_run: True returns the PlannedAction (what WOULD happen) without changing anything. Use it first, show the user, then call again.
+                backend: Force one backend ("rest", "mcp", "acli", ...). Default: the preset order. A cursor pins its backend.
+
+            Returns:
+                Board
+
+            Raises:
+                NoBackendAvailableError: No configured backend can serve this operation.
+                PolicyDeniedError: Write access is not enabled. ConfirmationDeclinedError: The user declined.
+
+            Access: WRITE (changes data; the user confirms; preview with dry_run=True)
+
+            Example:
+                >>> r = await client.jira.agile.create_board("Team", filter_id=10, dry_run=True)
+        """
+        return cast("Board | PlannedAction", await self._call("jira.agile.board.create", JiraAgileWriter, "create_board", name, filter_id=filter_id, board_type=board_type, dry_run=dry_run, backend=backend))
 

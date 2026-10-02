@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from atlassian_client.protocols import JiraIssueReader, JiraAgileWriter
+from atlassian_client.protocols import AnalyticsReader, JiraIssueReader
 from tests.contract.conftest import BACKENDS
 
 pytestmark = [pytest.mark.layer_01]
@@ -31,12 +31,12 @@ def test_harness_fixture_gives_fake_and_rest_with_server_only_for_rest(harness):
 def test_harness_fails_loudly_when_a_backend_lacks_a_protocol(harness):
     if harness.name == "fake":
         pytest.skip("the fake implements everything")
-    with pytest.raises(AssertionError, match="does not implement JiraAgileWriter"):
-        harness.impl(JiraAgileWriter)                    # REST has no writers until P2
+    with pytest.raises(AssertionError, match="does not implement AnalyticsReader"):
+        harness.impl(AnalyticsReader)                    # REST has no Data Lake access
 
 
 def test_every_contract_test_is_marked_layer_01():
     for f in CONTRACT.glob("test_*.py"):
-        if f.name.startswith(("test_matrix", "test_mcp_matrix")):
+        if f.name.startswith(("test_matrix", "test_mcp_matrix", "test_mcp_writes")):
             continue
         assert "layer_01" in f.read_text(), f.name
