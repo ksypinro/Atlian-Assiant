@@ -1,0 +1,22 @@
+id: PROTO.IdentityReader
+status: done
+commits: []
+evidence: tracking/evidence/PROTO.IdentityReader.md
+review:
+  by: claude
+  at: '2026-10-02T16:50:08Z'
+  decision: approved
+  notes: 'delegated P0 approval: checks passed'
+history:
+- at: '2026-10-02T16:50:06Z'
+  by: claude
+  event: claimed
+  note: ''
+- at: '2026-10-02T16:50:07Z'
+  by: claude
+  event: submitted
+  note: 1 checks passed; 230 out-of-scope files
+- at: '2026-10-02T16:50:08Z'
+  by: claude
+  event: approved
+  note: 'delegated P0 approval: checks passed'

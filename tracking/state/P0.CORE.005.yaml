@@ -1,0 +1,22 @@
+id: P0.CORE.005
+status: done
+commits: []
+evidence: tracking/evidence/P0.CORE.005.md
+review:
+  by: claude
+  at: '2026-10-02T16:48:10Z'
+  decision: approved
+  notes: 'delegated P0 approval: checks passed'
+history:
+- at: '2026-10-02T16:48:09Z'
+  by: claude
+  event: claimed
+  note: ''
+- at: '2026-10-02T16:48:10Z'
+  by: claude
+  event: submitted
+  note: 1 checks passed; 132 out-of-scope files
+- at: '2026-10-02T16:48:10Z'
+  by: claude
+  event: approved
+  note: 'delegated P0 approval: checks passed'

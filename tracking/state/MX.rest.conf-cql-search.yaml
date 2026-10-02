@@ -1,0 +1,22 @@
+id: MX.rest.conf-cql-search
+status: done
+commits: []
+evidence: tracking/evidence/MX.rest.conf-cql-search.md
+review:
+  by: claude
+  at: '2026-10-02T16:48:47Z'
+  decision: approved
+  notes: 'delegated P0 approval: checks passed'
+history:
+- at: '2026-10-02T16:48:46Z'
+  by: claude
+  event: claimed
+  note: ''
+- at: '2026-10-02T16:48:47Z'
+  by: claude
+  event: submitted
+  note: 1 checks passed; 171 out-of-scope files
+- at: '2026-10-02T16:48:47Z'
+  by: claude
+  event: approved
+  note: 'delegated P0 approval: checks passed'

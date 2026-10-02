@@ -2,7 +2,7 @@
 id: SEC-14
 title: 'Security control: Slack / Teams / Twilio / IMAP credentials'
 type: security
-phase: P0
+phase: P4b
 workstream: SEC
 design_refs:
 - §17

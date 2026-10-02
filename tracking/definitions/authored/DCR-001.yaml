@@ -1,0 +1,22 @@
+id: DCR-001
+title: Backends expose protocol implementations by composition (implementation_for)
+type: dcr
+phase: P0
+workstream: REL
+design_refs:
+- §9.1
+- §12.4
+research_refs: []
+depends_on: []
+deliverables: []
+acceptance:
+- Jira and Confluence protocols share method names with incompatible signatures (list_comments,
+  list_versions, list_attachments, download_attachment), so one backend object cannot
+  structurally satisfy both. Backends compose one component per API family and expose
+  implementation_for(protocol); the router and ClientFactory.sub_client resolve implementations
+  through protocols.base.implementation_of.
+checks: []
+size: M
+human_only: true
+needs: decision
+source: authored

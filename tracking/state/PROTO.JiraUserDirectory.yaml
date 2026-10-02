@@ -1,0 +1,22 @@
+id: PROTO.JiraUserDirectory
+status: done
+commits: []
+evidence: tracking/evidence/PROTO.JiraUserDirectory.md
+review:
+  by: claude
+  at: '2026-10-02T16:50:22Z'
+  decision: approved
+  notes: 'delegated P0 approval: checks passed'
+history:
+- at: '2026-10-02T16:50:20Z'
+  by: claude
+  event: claimed
+  note: ''
+- at: '2026-10-02T16:50:21Z'
+  by: claude
+  event: submitted
+  note: 1 checks passed; 244 out-of-scope files
+- at: '2026-10-02T16:50:22Z'
+  by: claude
+  event: approved
+  note: 'delegated P0 approval: checks passed'

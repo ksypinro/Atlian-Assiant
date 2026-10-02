@@ -1,0 +1,22 @@
+id: MX.rest.jira-users
+status: done
+commits: []
+evidence: tracking/evidence/MX.rest.jira-users.md
+review:
+  by: claude
+  at: '2026-10-02T16:49:19Z'
+  decision: approved
+  notes: 'delegated P0 approval: checks passed'
+history:
+- at: '2026-10-02T16:49:18Z'
+  by: claude
+  event: claimed
+  note: ''
+- at: '2026-10-02T16:49:19Z'
+  by: claude
+  event: submitted
+  note: 1 checks passed; 203 out-of-scope files
+- at: '2026-10-02T16:49:19Z'
+  by: claude
+  event: approved
+  note: 'delegated P0 approval: checks passed'

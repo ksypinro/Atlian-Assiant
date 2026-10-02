@@ -141,6 +141,7 @@ tool_phases:
 
 # §17 security concern keyword -> phase (first match wins; default P2)
 security_phases:
+  - [Slack, P4b]
   - [Credential, P0]
   - [Least privilege, P1]
   - [Tenant, P0]
@@ -155,7 +156,6 @@ security_phases:
   - [Forge Realtime, P4]
   - [Forge, P4]
   - [Automation, P3]
-  - [Slack, P4b]
   - [Relays, P4]
   - [Connect, P4c]
   - [AWS, P4]

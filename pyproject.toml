@@ -31,7 +31,7 @@ twilio = ["twilio>=9.0"]
 kafka = ["aiokafka>=0.11"]
 tunnels = ["ngrok>=1.3"]
 yaml = ["pyyaml>=6.0"]
-dev = ["pytest>=8.0", "respx>=0.21", "mypy>=1.10", "ruff>=0.5", "pyyaml>=6.0", "jsonschema>=4.21"]
+dev = ["pytest>=8.0", "hypothesis>=6.100", "respx>=0.21", "mypy>=1.10", "ruff>=0.5", "pyyaml>=6.0", "jsonschema>=4.21"]
 
 [project.scripts]
 atlassian-client = "atlassian_client.cli:main"
@@ -49,6 +49,10 @@ plugins = ["pydantic.mypy"]
 [tool.ruff]
 line-length = 120
 target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = ["E501", "B008"]
 
 [dependency-groups]
 tracking = ["pydantic>=2.7", "pyyaml>=6.0", "jsonschema>=4.21", "pytest>=8.0"]

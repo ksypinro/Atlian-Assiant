@@ -1072,6 +1072,14 @@ class Backend(Protocol):
     async def aclose(self) -> None: ...
 ```
 
+> **Design change DCR-001 (implemented in P0): composition instead of one big object.** Jira and Confluence protocols
+> share method names with incompatible signatures (`list_comments`, `list_versions`, `list_attachments`,
+> `download_attachment`), so a single backend object cannot satisfy both structurally. A backend is therefore composed of
+> one component per API family and may expose `implementation_for(protocol) -> object | None`. The router and
+> `ClientFactory.sub_client` resolve the implementation with `protocols.base.implementation_of(backend, protocol)`, which
+> uses the hook when present and falls back to a structural `isinstance` check. `supported_operations()` stays on the
+> backend. `RestBackend` and `FakeBackend` use this pattern.
+
 ### 9.2 Jira
 
 ```python
@@ -4195,6 +4203,7 @@ Version floors are indicative and will be pinned at implementation time.
 | 013 | Every delivery method is a cataloged unit (provision, consume, verify, test), and CI checks the catalog against the research | "Implemented" becomes a testable property; a new research section fails CI until it is mapped | A prose list of supported methods |
 | 014 | Human channels are implemented as provisioning + machine consumption + verification | Email, Slack, Teams, SMS and RSS become usable event sources with no public URL (IMAP, Socket Mode, Graph polling, Twilio log, feeds) | Treating them as out of scope |
 | 015 | Non-paths are explicit guards, not omissions | Users and agents get a refusal with a hint instead of a silent no-op (Application Tunnels, upstream Kafka/SSE, Confluence Cloud REST webhooks) | Undocumented absence |
+| 016 | Backends are composed of per-family components exposed through `implementation_for` (DCR-001) | Jira and Confluence protocols share method names with different signatures | One object implementing every protocol |
 
 ---
 
