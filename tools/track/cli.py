@@ -192,6 +192,9 @@ def cmd_metric(a) -> int:
     return 0
 
 
+MUTATING = {"seed", "submit", "claim", "release", "block", "unblock", "review", "wont-do", "gate", "dcr", "verify-done"}
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="track", description="Implementation tracker")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -228,7 +231,10 @@ def main(argv: list[str] | None = None) -> int:
 
     args = ap.parse_args(argv)
     try:
-        return args.fn(args)
+        rc = args.fn(args)
+        if args.cmd in MUTATING and rc == 0:
+            report.write(World.load())
+        return rc
     except TrackError as e:
         print("error:", e, file=sys.stderr)
         return 2

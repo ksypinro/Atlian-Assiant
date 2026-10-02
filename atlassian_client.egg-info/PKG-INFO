@@ -1,0 +1,61 @@
+Metadata-Version: 2.4
+Name: atlassian-client
+Version: 0.0.0
+Summary: One documented client over every way of reading, writing and watching Jira and Confluence
+Requires-Python: >=3.11
+Requires-Dist: httpx>=0.27
+Requires-Dist: pydantic>=2.7
+Requires-Dist: pydantic-settings>=2.3
+Requires-Dist: anyio>=4.4
+Provides-Extra: mcp
+Requires-Dist: mcp>=1.10; extra == "mcp"
+Provides-Extra: browser
+Requires-Dist: playwright>=1.45; extra == "browser"
+Provides-Extra: datalake
+Requires-Dist: delta-sharing>=1.0; extra == "datalake"
+Requires-Dist: pandas>=2.2; extra == "datalake"
+Provides-Extra: duckdb
+Requires-Dist: duckdb>=1.0; extra == "duckdb"
+Provides-Extra: aws
+Requires-Dist: boto3>=1.34; extra == "aws"
+Provides-Extra: azure
+Requires-Dist: azure-servicebus>=7.12; extra == "azure"
+Provides-Extra: gcp
+Requires-Dist: google-cloud-pubsub>=2.21; extra == "gcp"
+Provides-Extra: server
+Requires-Dist: starlette>=0.37; extra == "server"
+Requires-Dist: uvicorn>=0.30; extra == "server"
+Provides-Extra: jwt
+Requires-Dist: pyjwt[crypto]>=2.8; extra == "jwt"
+Provides-Extra: rss
+Requires-Dist: feedparser>=6.0; extra == "rss"
+Provides-Extra: db
+Requires-Dist: sqlalchemy>=2.0; extra == "db"
+Provides-Extra: redis
+Requires-Dist: redis>=5.0; extra == "redis"
+Provides-Extra: formats
+Requires-Dist: markdown-it-py>=3.0; extra == "formats"
+Requires-Dist: beautifulsoup4>=4.12; extra == "formats"
+Provides-Extra: otel
+Requires-Dist: opentelemetry-api>=1.25; extra == "otel"
+Provides-Extra: agent
+Requires-Dist: anthropic>=0.40; extra == "agent"
+Provides-Extra: slack
+Requires-Dist: slack-sdk>=3.27; extra == "slack"
+Provides-Extra: msgraph
+Requires-Dist: msal>=1.28; extra == "msgraph"
+Provides-Extra: twilio
+Requires-Dist: twilio>=9.0; extra == "twilio"
+Provides-Extra: kafka
+Requires-Dist: aiokafka>=0.11; extra == "kafka"
+Provides-Extra: tunnels
+Requires-Dist: ngrok>=1.3; extra == "tunnels"
+Provides-Extra: yaml
+Requires-Dist: pyyaml>=6.0; extra == "yaml"
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"
+Requires-Dist: respx>=0.21; extra == "dev"
+Requires-Dist: mypy>=1.10; extra == "dev"
+Requires-Dist: ruff>=0.5; extra == "dev"
+Requires-Dist: pyyaml>=6.0; extra == "dev"
+Requires-Dist: jsonschema>=4.21; extra == "dev"

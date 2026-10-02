@@ -1,0 +1,15 @@
+id: P0.REL.001
+status: in_review
+claimed_by: claude
+commits:
+- cc74593
+evidence: tracking/evidence/P0.REL.001.md
+history:
+- at: '2026-10-02T15:51:42Z'
+  by: claude
+  event: claimed
+  note: ''
+- at: '2026-10-02T15:51:55Z'
+  by: claude
+  event: submitted
+  note: 1 checks passed; 1 out-of-scope files

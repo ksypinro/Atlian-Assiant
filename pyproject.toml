@@ -1,8 +1,54 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "atlassian-client-tracking"
+name = "atlassian-client"
 version = "0.0.0"
-description = "Implementation tracker for the AtlassianClient build"
+description = "One documented client over every way of reading, writing and watching Jira and Confluence"
 requires-python = ">=3.11"
+dependencies = ["httpx>=0.27", "pydantic>=2.7", "pydantic-settings>=2.3", "anyio>=4.4"]
+
+[project.optional-dependencies]
+mcp = ["mcp>=1.10"]
+browser = ["playwright>=1.45"]
+datalake = ["delta-sharing>=1.0", "pandas>=2.2"]
+duckdb = ["duckdb>=1.0"]
+aws = ["boto3>=1.34"]
+azure = ["azure-servicebus>=7.12"]
+gcp = ["google-cloud-pubsub>=2.21"]
+server = ["starlette>=0.37", "uvicorn>=0.30"]
+jwt = ["pyjwt[crypto]>=2.8"]
+rss = ["feedparser>=6.0"]
+db = ["sqlalchemy>=2.0"]
+redis = ["redis>=5.0"]
+formats = ["markdown-it-py>=3.0", "beautifulsoup4>=4.12"]
+otel = ["opentelemetry-api>=1.25"]
+agent = ["anthropic>=0.40"]
+slack = ["slack-sdk>=3.27"]
+msgraph = ["msal>=1.28"]
+twilio = ["twilio>=9.0"]
+kafka = ["aiokafka>=0.11"]
+tunnels = ["ngrok>=1.3"]
+yaml = ["pyyaml>=6.0"]
+dev = ["pytest>=8.0", "respx>=0.21", "mypy>=1.10", "ruff>=0.5", "pyyaml>=6.0", "jsonschema>=4.21"]
+
+[project.scripts]
+atlassian-client = "atlassian_client.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["atlassian_client*"]
+
+[tool.setuptools.package-data]
+atlassian_client = ["py.typed"]
+
+[tool.mypy]
+strict = true
+plugins = ["pydantic.mypy"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
 
 [dependency-groups]
 tracking = ["pydantic>=2.7", "pyyaml>=6.0", "jsonschema>=4.21", "pytest>=8.0"]
