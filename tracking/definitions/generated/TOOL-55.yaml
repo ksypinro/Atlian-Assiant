@@ -2,7 +2,7 @@
 id: TOOL-55
 title: Agent tool events_recommend_plan (READ)
 type: build
-phase: P1
+phase: P3
 workstream: AGENT
 design_refs:
 - §16.2

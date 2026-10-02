@@ -9,6 +9,7 @@ from typing import Any
 import anyio.from_thread
 from anyio.from_thread import BlockingPortal
 
+from ..agent.tools import ToolRegistry
 from ..config import AtlassianConfig
 from .client import AsyncAtlassianClient
 
@@ -23,6 +24,8 @@ class SyncProxy:
         self._target, self._portal = target, portal
 
     def __getattr__(self, name: str) -> Any:
+        if name == "invoke" and hasattr(self._target, "ainvoke") and not hasattr(self._target, "invoke"):
+            name = "ainvoke"                       # tools.invoke(...) is the blocking spelling of tools.ainvoke(...)
         attr = getattr(self._target, name)
         if inspect.iscoroutinefunction(attr):
             @functools.wraps(attr)
@@ -39,7 +42,7 @@ class SyncProxy:
                     except StopAsyncIteration:
                         return
             return iterate
-        if getattr(attr, "__namespace__", False) is True or isinstance(attr, AsyncAtlassianClient):
+        if getattr(attr, "__namespace__", False) is True or isinstance(attr, (AsyncAtlassianClient, ToolRegistry)):
             return SyncProxy(attr, self._portal)
         return attr
 

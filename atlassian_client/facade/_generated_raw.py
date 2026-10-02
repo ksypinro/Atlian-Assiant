@@ -15,10 +15,11 @@ from ..models.jira import (Board, BoardConfig, ChangelogEntry, Comment, Componen
 from ..models.jira import Attachment as JiraAttachment
 from ..models.jira import AttachmentContent as JiraAttachmentContent
 from ..models.jsm import CustomerRequest, JsmInfo, KbArticle, Organization, RequestComment, RequestType, ServiceDesk, SlaInfo
+from ..models.graph import GraphContext, GraphObject, SemanticHit
 from ..models.webhooks import RawResponse
 from ..protocols import (ConfluenceContentReader, ConfluenceSearcher, ConfluenceSpaceReader, ConfluenceTemplateReader, JiraAgileReader,
                          JiraIssueReader, JiraIssueSearcher, JiraJqlTools, JiraMetadataReader, JiraProjectReader, JiraUserDirectory,
-                         JsmReader, RawRequester)
+                         JsmReader, RawRequester, SemanticSearcher, TeamworkGraphReader)
 from ..protocols.confluence import BodyFormat, ContentType
 from ._namespace import Namespace
 

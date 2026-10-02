@@ -29,7 +29,7 @@ class Telemetry:
         start = time.perf_counter()
         otel_cm: Any = None
         try:
-            from opentelemetry import trace  # type: ignore[import-not-found,unused-ignore]
+            from opentelemetry import trace  # type: ignore[import-not-found,unused-ignore,attr-defined]
 
             otel_cm = trace.get_tracer("atlassian_client").start_as_current_span(f"atlassian.{operation}")
             span = otel_cm.__enter__()

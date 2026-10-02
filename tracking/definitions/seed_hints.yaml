@@ -136,6 +136,8 @@ tool_phases:
     ORG_ADMIN: P5
   by_tool:
     events_list_methods: P3
+    events_recommend_plan: P3
+    events_verify_method: P3
     atlassian_discover_operations: P6
     atlassian_call_operation: P6
 

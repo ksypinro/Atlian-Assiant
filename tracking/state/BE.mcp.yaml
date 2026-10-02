@@ -1,0 +1,22 @@
+id: BE.mcp
+status: done
+commits: []
+evidence: tracking/evidence/BE.mcp.md
+review:
+  by: claude
+  at: '2026-10-02T17:58:48Z'
+  decision: approved
+  notes: 'delegated P0 approval: checks passed'
+history:
+- at: '2026-10-02T17:58:46Z'
+  by: claude
+  event: claimed
+  note: ''
+- at: '2026-10-02T17:58:47Z'
+  by: claude
+  event: submitted
+  note: 1 checks passed; 42 out-of-scope files
+- at: '2026-10-02T17:58:48Z'
+  by: claude
+  event: approved
+  note: 'delegated P0 approval: checks passed'

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 from .. import operations as ops
 from ..agent.describe import build_manifest, help_for
+from ..agent.tools import ToolRegistry
 from ..capabilities import BackendKind
 from ..config import AtlassianConfig
 from ..core.services import CoreServices
@@ -12,6 +13,7 @@ from ..models.identity import Identity
 from ..policy import AccessPolicy, ConfirmationHandler
 from ..protocols import IdentityReader
 from ..routing import Preset, Router
+from ._generated_graph import GraphClient
 from ._generated_jsm import JsmClient
 from ._generated_raw import RawClient
 from ._namespace import Namespace
@@ -40,7 +42,7 @@ class AsyncAtlassianClient(Namespace):
         self.jsm = JsmClient(router)
         self.confluence = ConfluenceClient(router)
         self.raw = RawClient(router)
-        self.graph: Any = Unavailable("graph", "P1")
+        self.graph = GraphClient(router)
         self.analytics: Any = Unavailable("analytics", "P5")
         self.exports: Any = Unavailable("exports", "P5")
         self.automation: Any = Unavailable("automation", "P3")
@@ -49,7 +51,7 @@ class AsyncAtlassianClient(Namespace):
         self.events: Any = Unavailable("events", "P3")
         self.mirror: Any = Unavailable("mirror", "P6")
         self.browser: Any = Unavailable("browser", "P5")
-        self.tools: Any = Unavailable("tools", "P1")
+        self.tools = ToolRegistry(self)
 
     # ---------------------------------------------------------------- construction
     @classmethod
@@ -103,7 +105,10 @@ class AsyncAtlassianClient(Namespace):
 
     def with_policy(self, policy: AccessPolicy) -> AsyncAtlassianClient:
         """A view of this client under a different access policy."""
-        return self._clone(self.router, policy)
+        from ..policy import PolicyGuard
+
+        guard = PolicyGuard(policy, self.confirm, cloud_id=self.router.cloud_id or self.config.cloud_id)
+        return self._clone(self.router.guarded(guard), policy)
 
     # ---------------------------------------------------------------- lifecycle
     async def aclose(self) -> None:

@@ -5,7 +5,7 @@ import time
 from collections.abc import Callable, Mapping, Sequence
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 from pydantic import BaseModel
 
@@ -21,6 +21,9 @@ from .core.errors import (
 from .core.pagination import Cursor
 from .models.common import AtlassianModel, Page, SourceRef
 from .protocols.base import Backend, implementation_of
+
+if TYPE_CHECKING:
+    from .policy import GuardDecision
 
 
 class Preset(StrEnum):
@@ -114,12 +117,14 @@ class CircuitBreaker:
 class Guard(Protocol):
     """Runs before routing (the PolicyGuard of design section 16.4 implements this)."""
 
-    async def authorize(self, op: Operation, args: tuple[Any, ...], kwargs: dict[str, Any]) -> None: ...
+    async def authorize(self, op: Operation, args: tuple[Any, ...], kwargs: dict[str, Any]) -> GuardDecision: ...
 
 
 class AllowAll:
-    async def authorize(self, op: Operation, args: tuple[Any, ...], kwargs: dict[str, Any]) -> None:
-        return None
+    async def authorize(self, op: Operation, args: tuple[Any, ...], kwargs: dict[str, Any]) -> GuardDecision:
+        from .policy import GuardDecision
+
+        return GuardDecision(args, dict(kwargs))
 
 
 def cursor_backend(cursor: str) -> B:
@@ -174,6 +179,13 @@ class Router:
         self.site, self.cloud_id, self._cloud = site, cloud_id, deployment_cloud
         self._default_backend: B | None = None
 
+    def guarded(self, guard: Guard) -> Router:
+        """A view of this router under a different guard (policy)."""
+        clone = Router(self._backends, self._selection, guard, self._breaker, site=self.site, cloud_id=self.cloud_id,
+                       deployment_cloud=self._cloud)
+        clone._default_backend = self._default_backend
+        return clone
+
     def forced(self, backend: B | str | None) -> Router:
         """A view of this router that sends every call to one backend (no fallback)."""
         clone = Router(self._backends, self._selection, self._guard, self._breaker, site=self.site, cloud_id=self.cloud_id,
@@ -204,7 +216,10 @@ class Router:
                                           hint="This operation is Cloud-only; use a Data Center equivalent or REST.",
                                           operation=op.id)
         forced = B(backend) if backend else (cursor_backend(cursor) if cursor else self._default_backend)
-        await self._guard.authorize(op, args, kwargs)
+        decision = await self._guard.authorize(op, args, kwargs)
+        if decision.plan is not None:
+            return decision.plan                     # dry run: report what WOULD happen, execute nothing
+        args, kwargs = decision.args, decision.kwargs
         attempts: list[tuple[B, AtlassianError]] = []
         for impl in self.candidates(op, forced):
             target = implementation_of(impl, protocol)

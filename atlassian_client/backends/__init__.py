@@ -5,6 +5,7 @@ from ..factory import BackendFactory
 
 
 def builtin_factories() -> list[BackendFactory]:
+    from .mcp import McpBackendFactory
     from .rest_cloud import RestBackendFactory
 
-    return [RestBackendFactory()]
+    return [RestBackendFactory(), McpBackendFactory()]

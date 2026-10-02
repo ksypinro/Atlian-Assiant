@@ -40,7 +40,7 @@ atlassian-client = "atlassian_client.cli:main"
 include = ["atlassian_client*"]
 
 [tool.setuptools.package-data]
-atlassian_client = ["py.typed"]
+atlassian_client = ["py.typed", "agent/docs/*.md", "agent/docs/*.txt"]
 
 [tool.mypy]
 strict = true

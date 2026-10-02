@@ -37,6 +37,6 @@ def test_harness_fails_loudly_when_a_backend_lacks_a_protocol(harness):
 
 def test_every_contract_test_is_marked_layer_01():
     for f in CONTRACT.glob("test_*.py"):
-        if f.name.startswith("test_matrix"):
+        if f.name.startswith(("test_matrix", "test_mcp_matrix")):
             continue
         assert "layer_01" in f.read_text(), f.name

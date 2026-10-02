@@ -10,7 +10,7 @@ import httpx
 
 from .capabilities import BackendKind, Deployment
 from .config import AtlassianConfig
-from .core.errors import BackendUnavailableError
+from .core.errors import BackendUnavailableError, ConfigurationError
 from .core.services import CoreServices
 from .policy import AccessPolicy, ConfirmationHandler
 from .protocols.base import Backend, implementation_of
@@ -142,8 +142,15 @@ class ClientFactory:
         if cfg.deployment is Deployment.DATA_CENTER and preset is None:
             chosen = Preset.DATA_CENTER
         sel = selection or SelectionPolicy.from_preset(chosen)
-        router = Router(built, sel, site=cfg.site, cloud_id=cfg.cloud_id, deployment_cloud=cfg.deployment is Deployment.CLOUD)
-        return AsyncAtlassianClient(router, cfg, core, report, chosen, policy or AccessPolicy.from_config(cfg), confirm)
+        pol = policy or AccessPolicy.from_config(cfg)
+        from .policy import AutoApprove, PolicyGuard
+
+        if chosen is Preset.AGENT and isinstance(confirm, AutoApprove):
+            raise ConfigurationError("AutoApprove cannot be used with the agent preset",
+                                     hint="Agents must confirm writes with a human: use CallbackConfirmation or CliConfirmation.")
+        router = Router(built, sel, PolicyGuard(pol, confirm, cloud_id=cfg.cloud_id), site=cfg.site, cloud_id=cfg.cloud_id,
+                        deployment_cloud=cfg.deployment is Deployment.CLOUD)
+        return AsyncAtlassianClient(router, cfg, core, report, chosen, pol, confirm)
 
     def build(self, config: AtlassianConfig | None = None, **kwargs: Any) -> AtlassianClient:
         from .facade.sync import AtlassianClient

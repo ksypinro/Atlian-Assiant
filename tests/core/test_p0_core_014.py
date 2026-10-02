@@ -41,7 +41,7 @@ def test_default_registry_has_rest():
 
 def test_unavailable_backends_are_skipped_with_a_reason():
     reg = default_registry()
-    reg.register(Dummy())
+    reg.register(Dummy(), replace=True)
     client = ClientFactory(reg).build_async(AtlassianConfig(**CFG), http=ScenarioServer().client())
     d = client.describe()
     assert d["backends"]["rest"].startswith("ready") and d["backends"]["mcp"] == "unavailable: pip install 'atlassian-client[mcp]'"

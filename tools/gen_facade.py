@@ -327,6 +327,23 @@ cls("ConfluenceTemplatesClient", "Confluence page templates.", "confluence", [
     M("get", "confluence.template.get", "ConfluenceTemplateReader", "get_template", "template_id: str", "Template", "Fetch one template.",
       "You have a template id.", 'tpl = await client.confluence.templates.get("tpl1")', docs={"template_id": "Template id."}),
 ])
+cls("GraphClient", "Teamwork Graph context and Rovo semantic search (Cloud only; consume Rovo credits).", "graph", [
+    M("context", "graph.context", "TeamworkGraphReader", "get_context", "ari_or_url: str, *, max_items: int = 50", "GraphContext",
+      "Connected context (related work, people, documents) for an Atlassian entity.",
+      "The user asks about RELATIONSHIPS or context of an issue/page, not just its fields.",
+      'ctx = await client.graph.context("https://example.atlassian.net/browse/PROJ-1")',
+      docs={"ari_or_url": "Atlassian Resource Identifier or the entity URL.", "max_items": "Maximum related items."},
+      raises="PolicyDeniedError: Rovo credit consumption is not enabled (allow_credit_consuming)."),
+    M("objects", "graph.object.get", "TeamworkGraphReader", "get_objects", "aris_or_urls: Sequence[str]", "list[GraphObject]",
+      "Fetch graph objects by ARI or URL.", "You have ARIs or URLs and need object details.",
+      'objs = await client.graph.objects(["https://example.atlassian.net/browse/PROJ-1"])',
+      docs={"aris_or_urls": "ARIs or URLs of the objects."}),
+    M("semantic_search", "graph.search.semantic", "SemanticSearcher", "semantic_search", "query: str, *, products: Sequence[str] = (), limit: int = 20",
+      "list[SemanticHit]", "Semantic search across Jira, Confluence and connected apps (Rovo).",
+      "Fuzzy or cross-product questions where exact JQL/CQL is unknown.", 'hits = await client.graph.semantic_search("how do we rotate keys")',
+      docs={"products": "Restrict to products, e.g. [\"confluence\"]."},
+      raises="PolicyDeniedError: Rovo credit consumption is not enabled (allow_credit_consuming)."),
+])
 cls("RawClient", "Raw access to any REST endpoint with auth, retry and pagination applied.", "raw", [
     M("request", "raw.request", "RawRequester", "request",
       'method: str, path: str, *, product: Literal["jira", "confluence", "jsm", "agile", "admin"], params: Mapping[str, Any] | None = None, '
@@ -423,10 +440,11 @@ from ..models.jira import (Board, BoardConfig, ChangelogEntry, Comment, Componen
 from ..models.jira import Attachment as JiraAttachment
 from ..models.jira import AttachmentContent as JiraAttachmentContent
 from ..models.jsm import CustomerRequest, JsmInfo, KbArticle, Organization, RequestComment, RequestType, ServiceDesk, SlaInfo
+from ..models.graph import GraphContext, GraphObject, SemanticHit
 from ..models.webhooks import RawResponse
 from ..protocols import (ConfluenceContentReader, ConfluenceSearcher, ConfluenceSpaceReader, ConfluenceTemplateReader, JiraAgileReader,
                          JiraIssueReader, JiraIssueSearcher, JiraJqlTools, JiraMetadataReader, JiraProjectReader, JiraUserDirectory,
-                         JsmReader, RawRequester)
+                         JsmReader, RawRequester, SemanticSearcher, TeamworkGraphReader)
 from ..protocols.confluence import BodyFormat, ContentType
 from ._namespace import Namespace
 

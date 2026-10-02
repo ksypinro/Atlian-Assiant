@@ -2,7 +2,7 @@
 id: TOOL-56
 title: Agent tool events_verify_method (READ)
 type: build
-phase: P1
+phase: P3
 workstream: AGENT
 design_refs:
 - §16.2

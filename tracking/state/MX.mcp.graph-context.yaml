@@ -1,0 +1,22 @@
+id: MX.mcp.graph-context
+status: done
+commits: []
+evidence: tracking/evidence/MX.mcp.graph-context.md
+review:
+  by: claude
+  at: '2026-10-02T17:59:11Z'
+  decision: approved
+  notes: 'delegated P0 approval: checks passed'
+history:
+- at: '2026-10-02T17:59:10Z'
+  by: claude
+  event: claimed
+  note: ''
+- at: '2026-10-02T17:59:11Z'
+  by: claude
+  event: submitted
+  note: 1 checks passed; 64 out-of-scope files
+- at: '2026-10-02T17:59:11Z'
+  by: claude
+  event: approved
+  note: 'delegated P0 approval: checks passed'

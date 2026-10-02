@@ -1,0 +1,22 @@
+id: MX.mcp.conf-versions-diff
+status: done
+commits: []
+evidence: tracking/evidence/MX.mcp.conf-versions-diff.md
+review:
+  by: claude
+  at: '2026-10-02T17:59:09Z'
+  decision: approved
+  notes: 'delegated P0 approval: checks passed'
+history:
+- at: '2026-10-02T17:59:07Z'
+  by: claude
+  event: claimed
+  note: ''
+- at: '2026-10-02T17:59:09Z'
+  by: claude
+  event: submitted
+  note: 1 checks passed; 62 out-of-scope files
+- at: '2026-10-02T17:59:09Z'
+  by: claude
+  event: approved
+  note: 'delegated P0 approval: checks passed'

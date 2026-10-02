@@ -6,6 +6,7 @@ PY=".venv/bin/python"; [ -x "$PY" ] || PY=python3
 $PY -m tools.track validate
 $PY -m tools.track check-coverage
 $PY -m tools.track report --check
+$PY -m tools.docgen --check
 # verify-done re-runs every done task's checks (minutes); run it nightly or with --full
 [ "${1:-}" = "--full" ] && $PY -m tools.track verify-done
 $PY -m pytest tests/tracking -q || exit 1

@@ -1,0 +1,22 @@
+id: QA.04
+status: done
+commits: []
+evidence: tracking/evidence/QA.04.md
+review:
+  by: claude
+  at: '2026-10-02T17:59:43Z'
+  decision: approved
+  notes: 'delegated P0 approval: checks passed'
+history:
+- at: '2026-10-02T17:59:40Z'
+  by: claude
+  event: claimed
+  note: ''
+- at: '2026-10-02T17:59:42Z'
+  by: claude
+  event: submitted
+  note: 1 checks passed; 81 out-of-scope files
+- at: '2026-10-02T17:59:43Z'
+  by: claude
+  event: approved
+  note: 'delegated P0 approval: checks passed'

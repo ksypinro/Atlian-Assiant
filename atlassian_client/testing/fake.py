@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, ClassVar, Literal, TypeVar
 
+from ..backends.mcp.backend import OP_TOOLS
 from ..backends.rest_cloud import normalize as n
 from ..backends.rest_cloud.backend import SUPPORTED
 from ..capabilities import BackendKind, Deployment
@@ -141,10 +142,10 @@ class FakeStore:
         self.dashboards = [n.dashboard(d) for d in j["dashboards"]]
         self.boards = [n.board(b) for b in a["boards"]]
         self.board_configs = {k: n.board_config(v) for k, v in a["configs"].items()}
-        self.board_issues = {k: [n.issue(i) for i in v] for k, v in a["board_issues"].items()}
+        self.board_issues = {k: [n.issue(i, "https://example.atlassian.net") for i in v] for k, v in a["board_issues"].items()}
         self.sprints = {k: [n.sprint(x) for x in v] for k, v in a["sprints"].items()}
-        self.sprint_issues = {k: [n.issue(i) for i in v] for k, v in a["sprint_issues"].items()}
-        self.backlog = {k: [n.issue(i) for i in v] for k, v in a["backlog"].items()}
+        self.sprint_issues = {k: [n.issue(i, "https://example.atlassian.net") for i in v] for k, v in a["sprint_issues"].items()}
+        self.backlog = {k: [n.issue(i, "https://example.atlassian.net") for i in v] for k, v in a["backlog"].items()}
         self.epics = {k: [n.epic(x) for x in v] for k, v in a["epics"].items()}
         self.jsm_info = n.jsm_info(s["info"])
         self.service_desks = [n.service_desk(x) for x in s["service_desks"]]
@@ -997,7 +998,7 @@ class FakeBackend:
         self.identity, self.raw = FakeIdentity(s), FakeRaw(s)
         self._parts: tuple[object, ...] = (self.jira, self.agile, self.jsm, self.confluence, self.graph, self.analytics, self.exports,
                                            self.audit, self.automation, self.webhooks, self.identity, self.raw)
-        self._ops = operations if operations is not None else SUPPORTED
+        self._ops = operations if operations is not None else SUPPORTED | frozenset(OP_TOOLS)
         self.calls: list[str] = []
 
     def implementation_for(self, protocol: type) -> object | None:

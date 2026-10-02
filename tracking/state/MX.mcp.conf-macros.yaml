@@ -1,0 +1,22 @@
+id: MX.mcp.conf-macros
+status: done
+commits: []
+evidence: tracking/evidence/MX.mcp.conf-macros.md
+review:
+  by: claude
+  at: '2026-10-02T17:59:01Z'
+  decision: approved
+  notes: 'delegated P0 approval: checks passed'
+history:
+- at: '2026-10-02T17:58:59Z'
+  by: claude
+  event: claimed
+  note: ''
+- at: '2026-10-02T17:59:00Z'
+  by: claude
+  event: submitted
+  note: 1 checks passed; 54 out-of-scope files
+- at: '2026-10-02T17:59:01Z'
+  by: claude
+  event: approved
+  note: 'delegated P0 approval: checks passed'

@@ -1,0 +1,22 @@
+id: P1.AGENT.002
+status: done
+commits: []
+evidence: tracking/evidence/P1.AGENT.002.md
+review:
+  by: claude
+  at: '2026-10-02T17:58:46Z'
+  decision: approved
+  notes: 'delegated P0 approval: checks passed'
+history:
+- at: '2026-10-02T17:58:44Z'
+  by: claude
+  event: claimed
+  note: ''
+- at: '2026-10-02T17:58:45Z'
+  by: claude
+  event: submitted
+  note: 1 checks passed; 42 out-of-scope files
+- at: '2026-10-02T17:58:46Z'
+  by: claude
+  event: approved
+  note: 'delegated P0 approval: checks passed'

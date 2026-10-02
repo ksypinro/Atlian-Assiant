@@ -53,7 +53,7 @@ def test_every_facade_operation_that_rest_serves_is_declared_supported():
 
     client = ClientFactory().build_async(AtlassianConfig(site="x"), backends=[], extra_backends={BackendKind.REST: FakeBackend()})
     facade_ops = {op for _, ns in walk_namespaces(client) for op in ns._OPS}
-    mcp_only = {"confluence.space.instructions.get"}          # no REST API; served by the MCP backend
+    mcp_only = {"confluence.space.instructions.get", "graph.context", "graph.object.get", "graph.search.semantic"}          # no REST API; served by the MCP backend
     assert facade_ops - mcp_only <= SUPPORTED, sorted(facade_ops - mcp_only - SUPPORTED)
 
 

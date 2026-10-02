@@ -7,7 +7,8 @@ from atlassian_client.agent.describe import walk_namespaces
 from atlassian_client.core.errors import NoBackendAvailableError, UnsupportedOperationError
 from atlassian_client.protocols import (ConfluenceContentReader, ConfluenceSearcher, ConfluenceSpaceReader, ConfluenceTemplateReader,
                                         JiraAgileReader, JiraIssueReader, JiraIssueSearcher, JiraJqlTools, JiraMetadataReader,
-                                        JiraProjectReader, JiraUserDirectory, JsmReader, RawRequester)
+                                        JiraProjectReader, JiraUserDirectory, JsmReader, RawRequester, SemanticSearcher,
+                                        TeamworkGraphReader)
 from atlassian_client.testing import FakeBackend
 from tools import docgen
 
@@ -42,7 +43,7 @@ def test_positional_parameters_match_the_protocol_they_route_to():
     """Facade signatures must stay in step with the protocols: same positional names, same keyword-only names."""
     protos = {p.__name__: p for p in (JiraIssueReader, JiraIssueSearcher, JiraProjectReader, JiraMetadataReader, JiraUserDirectory,
                                       JiraJqlTools, JiraAgileReader, JsmReader, ConfluenceContentReader, ConfluenceSearcher,
-                                      ConfluenceSpaceReader, ConfluenceTemplateReader, RawRequester)}
+                                      ConfluenceSpaceReader, ConfluenceTemplateReader, RawRequester, SemanticSearcher, TeamworkGraphReader)}
     checked = 0
     for path, ns in walk_namespaces(make()):
         for op_id, method_name in ns._OPS.items():
@@ -87,7 +88,7 @@ async def test_iteration_helpers_and_typed_shortcuts():
 
 def test_planned_namespaces_fail_loudly_and_name_the_phase():
     c = make()
-    for ns, phase in ((c.graph, "P1"), (c.events, "P3"), (c.analytics, "P5"), (c.mirror, "P6")):
+    for ns, phase in ((c.webhooks, "P3"), (c.events, "P3"), (c.analytics, "P5"), (c.mirror, "P6")):
         with pytest.raises(UnsupportedOperationError) as exc:
             ns.anything
         assert phase in str(exc.value) and "TRACKING.md" in exc.value.hint

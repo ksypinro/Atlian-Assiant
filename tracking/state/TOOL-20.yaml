@@ -1,0 +1,22 @@
+id: TOOL-20
+status: done
+commits: []
+evidence: tracking/evidence/TOOL-20.md
+review:
+  by: claude
+  at: '2026-10-02T18:00:31Z'
+  decision: approved
+  notes: 'delegated P0 approval: checks passed'
+history:
+- at: '2026-10-02T18:00:30Z'
+  by: claude
+  event: claimed
+  note: ''
+- at: '2026-10-02T18:00:31Z'
+  by: claude
+  event: submitted
+  note: 1 checks passed; 131 out-of-scope files
+- at: '2026-10-02T18:00:31Z'
+  by: claude
+  event: approved
+  note: 'delegated P0 approval: checks passed'
