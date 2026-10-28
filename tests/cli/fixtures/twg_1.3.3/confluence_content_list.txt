@@ -1,0 +1,17 @@
+Usage: twg confluence content list [options]
+
+List Confluence content in a space
+
+Options:
+  --content-type <type>  Content type. Defaults to page. Allowed: page,
+                         live_doc, blogpost, whiteboard, database, embed,
+                         smart_link, folder, slide (choices: "page", "live_doc",
+                         "blogpost", "whiteboard", "database", "embed",
+                         "smart_link", "folder", "slide", default: "page")
+  --space <key-or-id>    Confluence space key or numeric ID (required)
+  --limit <count>        Maximum number of results
+  --cursor <cursor>      Pagination cursor
+  -h, --help             display help for command
+
+Synonyms: page list, blogpost list, blog list, live doc list, live_doc list, whiteboard list, database list, embed list, smart link list, smart_link list, folder list, slide list, blog query
+

@@ -1,0 +1,193 @@
+{
+ "openapi": "3.0.1",
+ "info": {
+  "title": "Jira Software",
+  "version": "seed-1",
+  "description": "SEED SUBSET modelled on the public Atlassian spec: replace with `python -m tools.codegen --fetch`."
+ },
+ "servers": [
+  {
+   "url": "https://your-domain.atlassian.net"
+  }
+ ],
+ "paths": {
+  "/rest/agile/1.0/board/{boardId}": {
+   "get": {
+    "operationId": "getBoard",
+    "summary": "Get board",
+    "tags": [
+     "Board"
+    ],
+    "parameters": [
+     {
+      "name": "boardId",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   },
+   "delete": {
+    "operationId": "deleteBoard",
+    "summary": "Delete board",
+    "tags": [
+     "Board"
+    ],
+    "parameters": [
+     {
+      "name": "boardId",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/rest/agile/1.0/board/{boardId}/properties/{propertyKey}": {
+   "get": {
+    "operationId": "getBoardProperty",
+    "summary": "Get board property",
+    "tags": [
+     "Board"
+    ],
+    "parameters": [
+     {
+      "name": "boardId",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "propertyKey",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/rest/agile/1.0/board/{boardId}/quickfilter": {
+   "get": {
+    "operationId": "getAllQuickFilters",
+    "summary": "Get all quick filters",
+    "tags": [
+     "Board"
+    ],
+    "parameters": [
+     {
+      "name": "boardId",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/rest/agile/1.0/epic/{epicIdOrKey}": {
+   "get": {
+    "operationId": "getEpic",
+    "summary": "Get epic",
+    "tags": [
+     "Epic"
+    ],
+    "parameters": [
+     {
+      "name": "epicIdOrKey",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/rest/agile/1.0/epic/{epicIdOrKey}/issue": {
+   "get": {
+    "operationId": "getIssuesForEpic",
+    "summary": "Get issues for epic",
+    "tags": [
+     "Epic"
+    ],
+    "parameters": [
+     {
+      "name": "epicIdOrKey",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/rest/agile/1.0/sprint/{sprintId}": {
+   "get": {
+    "operationId": "getSprint",
+    "summary": "Get sprint",
+    "tags": [
+     "Sprint"
+    ],
+    "parameters": [
+     {
+      "name": "sprintId",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   },
+   "put": {
+    "operationId": "updateSprint",
+    "summary": "Update sprint",
+    "tags": [
+     "Sprint"
+    ],
+    "parameters": [
+     {
+      "name": "sprintId",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}

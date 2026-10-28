@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-import atlassian_client.protocols as P
+import atlian_assiant.protocols as P
 
-DESIGN = Path(__file__).parents[2] / "atlassian_client_architecture_design.md"
+DESIGN = Path(__file__).parents[2] / "docs/architecture_design.md"
 
 
 def design_protocols() -> dict[str, dict[str, list[str]]]:
@@ -51,7 +51,7 @@ def test_protocol_is_runtime_checkable_and_methods_are_async(name):
 
 
 def test_every_protocol_has_an_implementation_in_the_fake_backend():
-    from atlassian_client.testing import FakeBackend
+    from atlian_assiant.testing import FakeBackend
 
     fb = FakeBackend()
     missing = [n for n in DESIGNED if n != "Backend" and fb.implementation_for(getattr(P, n)) is None]
@@ -59,6 +59,6 @@ def test_every_protocol_has_an_implementation_in_the_fake_backend():
 
 
 def test_backend_protocol_surface():
-    from atlassian_client.testing import FakeBackend
+    from atlian_assiant.testing import FakeBackend
 
     assert isinstance(FakeBackend(), P.Backend) and set(DESIGNED["Backend"]) == {"supported_operations", "health", "aclose"}

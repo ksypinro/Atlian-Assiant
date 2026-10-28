@@ -1,10 +1,19 @@
 import pytest
 
-from atlassian_client import AtlassianConfig, BackendKind, ClientFactory
-from atlassian_client.protocols import (ConfluenceContentReader, ConfluenceSearcher, JiraAgileReader, JiraIssueReader, JiraIssueSearcher,
-                                        JiraMetadataReader, JiraProjectReader, JiraUserDirectory, JsmReader)
-from atlassian_client.testing import FakeBackend, scenario
-from atlassian_client.testing.server import ScenarioServer
+from atlian_assiant import AtlassianConfig, BackendKind, ClientFactory
+from atlian_assiant.protocols import (
+    ConfluenceContentReader,
+    ConfluenceSearcher,
+    JiraAgileReader,
+    JiraIssueReader,
+    JiraIssueSearcher,
+    JiraMetadataReader,
+    JiraProjectReader,
+    JiraUserDirectory,
+    JsmReader,
+)
+from atlian_assiant.testing import FakeBackend, scenario
+from atlian_assiant.testing.server import ScenarioServer
 
 pytestmark = [pytest.mark.layer_02]
 
@@ -39,7 +48,7 @@ async def test_fake_and_rest_return_identical_normalized_data_for_a_battery_of_r
         (ConfluenceContentReader, "list_labels", ("123",), {}), (ConfluenceContentReader, "get_restrictions", ("123",), {}),
         (ConfluenceSearcher, "search_cql", ("x",), {"limit": 2}),
     ]
-    from atlassian_client.protocols.base import implementation_of
+    from atlian_assiant.protocols.base import implementation_of
 
     for proto, method, args, kwargs in cases:
         a = dump(await getattr(implementation_of(fake, proto), method)(*args, **kwargs))
@@ -49,8 +58,8 @@ async def test_fake_and_rest_return_identical_normalized_data_for_a_battery_of_r
 
 @pytest.mark.anyio
 async def test_fake_writers_mutate_state_so_downstream_tests_can_assert_on_them():
-    from atlassian_client.models.jira import IssueDraft, IssueUpdate
-    from atlassian_client.protocols import JiraIssueDeleter, JiraIssueWriter
+    from atlian_assiant.models.jira import IssueDraft, IssueUpdate
+    from atlian_assiant.protocols import JiraIssueDeleter, JiraIssueWriter
 
     fb = FakeBackend()
     w = fb.implementation_for(JiraIssueWriter)
@@ -61,7 +70,7 @@ async def test_fake_writers_mutate_state_so_downstream_tests_can_assert_on_them(
     c = await w.add_comment(created.key, "hello")
     assert [x.body_markdown for x in (await fb.jira.list_comments(created.key)).items] == ["hello"] and c.id
     await fb.implementation_for(JiraIssueDeleter).delete_issue(created.key)
-    from atlassian_client.core.errors import NotFoundError
+    from atlian_assiant.core.errors import NotFoundError
 
     with pytest.raises(NotFoundError):
         await fb.jira.get_issue(created.key)
@@ -69,8 +78,8 @@ async def test_fake_writers_mutate_state_so_downstream_tests_can_assert_on_them(
 
 @pytest.mark.anyio
 async def test_fake_confluence_update_is_version_checked():
-    from atlassian_client.core.errors import ConflictError
-    from atlassian_client.models.confluence import ContentUpdate
+    from atlian_assiant.core.errors import ConflictError
+    from atlian_assiant.models.confluence import ContentUpdate
 
     fb = FakeBackend()
     updated = await fb.confluence.update_content("123", ContentUpdate(body="new", version=3))

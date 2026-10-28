@@ -1,9 +1,9 @@
 import pytest
 
-from atlassian_client import BackendKind
-from atlassian_client.protocols import SemanticSearcher
-from atlassian_client.protocols.base import implementation_of
-from atlassian_client.testing import FakeBackend
+from atlian_assiant import BackendKind
+from atlian_assiant.protocols import SemanticSearcher
+from atlian_assiant.protocols.base import implementation_of
+from atlian_assiant.testing import FakeBackend
 
 from .mcp_helpers import make_mcp
 

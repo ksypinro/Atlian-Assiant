@@ -1,0 +1,13 @@
+Search for work items using JQL
+
+Usage:
+  acli jira workitem search [flags]
+
+Flags:
+      --count          Return only the number of matching work items
+      --csv            Output in CSV format
+      --fields string  Comma-separated list of fields to include
+  -h, --help           help for search
+      --jql string     JQL query to execute
+      --json           Output in JSON format
+      --paginate       Fetch all pages of results

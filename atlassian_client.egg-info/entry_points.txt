@@ -1,2 +1,0 @@
-[console_scripts]
-atlassian-client = atlassian_client.cli:main

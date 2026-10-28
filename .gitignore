@@ -1,5 +1,22 @@
 .venv/
 __pycache__/
 *.pyc
-tracking/.results/
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+*.egg-info/
+build/
+dist/
+
+# local secrets
+.env
+.env.*
+
+# local implementation tracker (kept on the maintainer's machine, not published)
+tracking/
+TRACKING.md
+tools/track/
+tests/tracking/
+scripts/
+CLAUDE.md

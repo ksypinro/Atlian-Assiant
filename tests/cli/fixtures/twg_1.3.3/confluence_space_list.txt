@@ -1,0 +1,25 @@
+Usage: twg confluence space list [options]
+
+List Confluence spaces accessible to the authenticated user; filterable by type
+(global/personal), status (current/archived), or explicit space keys.
+
+Options:
+  --type <type>      Filter by type: global or personal
+  --status <status>  Filter by status: current or archived
+  --keys <keys>      Comma-separated list of space keys to fetch
+  --limit <n>        Maximum number of spaces to return (1-250, default 25)
+                     (default: "25")
+  --labels           Include space labels in output
+  -h, --help         display help for command
+
+Examples:
+  $ twg confluence space list --site hello
+  $ twg confluence space list --type global --status current --site hello
+  $ twg confluence space list --keys ENG,SUPPORT --labels --site hello
+
+Guards:
+  Use for: discovering Confluence spaces — listing all spaces, filtering by visibility, or fetching a known set by key.
+  Don't use for: content discovery within a space (use confluence content list --space <key-or-id>) or content search across spaces (use confluence search query).
+
+Synonyms: spaces, list spaces, browse spaces, space directory, find spaces
+

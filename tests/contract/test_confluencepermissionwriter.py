@@ -1,7 +1,7 @@
 import pytest
 
-from atlassian_client.core.errors import InvalidRequestError, UnsupportedOperationError
-from atlassian_client.protocols import ConfluenceContentReader, ConfluencePermissionWriter
+from atlian_assiant.core.errors import InvalidRequestError, UnsupportedOperationError
+from atlian_assiant.protocols import ConfluenceContentReader, ConfluencePermissionWriter
 
 pytestmark = [pytest.mark.layer_01, pytest.mark.anyio]
 

@@ -1,0 +1,26 @@
+Create links between work items.
+
+Usage:
+  acli jira workitem link create [flags]
+
+Examples:
+# Create a link between two work items
+$ acli jira workitem link create --out KEY-123 --in KEY-456 --type Blocks
+
+# Create multiple links from a JSON file
+$ acli jira workitem link create --from-json links.json
+
+# Generate an example JSON input structure
+$ acli jira workitem link create --generate-json
+
+
+Flags:
+      --from-csv string    Provide the input as a comma-separated table, where the first column is outward work item IDs, the second column is inward work item IDs, and the third column is linking type. The first row is ignored being the description.
+      --from-json string   Read a JSON file for mapping work items, linking work items, and linking types
+      --generate-json      Prints an example JSON structure to be used with --from-json
+  -h, --help               Show help for command
+      --ignore-errors      Ignore the errors and continue with the next work item
+      --in string          Inward work item ID.
+      --out string         Outward work item ID.
+      --type string        Work items linking type. Accepts outward descriptions
+      --yes                Confirm link creation without prompting

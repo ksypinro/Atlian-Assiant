@@ -1,8 +1,8 @@
 """Attachment upload / download: lazy, streamed, size-capped, text-extractable (design 9.2 and 10.1)."""
 import pytest
 
-from atlassian_client import AtlassianConfig, BackendKind, ClientFactory
-from atlassian_client.testing.server import ScenarioServer
+from atlian_assiant import AtlassianConfig, BackendKind, ClientFactory
+from atlian_assiant.testing.server import ScenarioServer
 
 BODY = b"line one\nline two\n"
 
@@ -66,7 +66,7 @@ async def test_text_extraction_only_for_text_files_and_save_to_disk(tmp_path):
 
 @pytest.mark.anyio
 async def test_uploads_are_serialized_per_issue_and_never_retried_on_a_server_error():
-    from atlassian_client.core.errors import ServerError
+    from atlian_assiant.core.errors import ServerError
 
     server = ScenarioServer()
     be = rest(server)

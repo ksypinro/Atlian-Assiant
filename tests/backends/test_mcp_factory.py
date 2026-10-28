@@ -1,11 +1,11 @@
 import pytest
 
-from atlassian_client import AtlassianConfig, BackendKind, ClientFactory
-from atlassian_client.backends.mcp import McpBackend, McpBackendFactory
-from atlassian_client.capabilities import Deployment
-from atlassian_client.factory import default_registry
-from atlassian_client.protocols import Backend
-from atlassian_client.testing.mcp_fake import FakeMcpTransport
+from atlian_assiant import AtlassianConfig, BackendKind, ClientFactory
+from atlian_assiant.backends.mcp import McpBackend, McpBackendFactory
+from atlian_assiant.capabilities import Deployment
+from atlian_assiant.factory import default_registry
+from atlian_assiant.protocols import Backend
+from atlian_assiant.testing.mcp_fake import FakeMcpTransport
 
 pytestmark = [pytest.mark.layer_04]
 BASIC = dict(site="example.atlassian.net", email="a@b.c", api_token="tok-123456")
@@ -44,7 +44,7 @@ def test_missing_sdk_is_reported_with_the_pip_extra(monkeypatch):
 
     monkeypatch.setattr(builtins, "__import__", fake_import)
     a = McpBackendFactory().availability(AtlassianConfig(**BASIC))
-    assert not a.ok and "pip install 'atlassian-client[mcp]'" in a.reason
+    assert not a.ok and "pip install 'atlian-assiant[mcp]'" in a.reason
 
 
 def test_injected_transport_factory_builds_a_working_client_end_to_end():

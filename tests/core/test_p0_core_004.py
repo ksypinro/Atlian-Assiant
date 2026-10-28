@@ -1,10 +1,8 @@
-import os
-import stat
 
 import pytest
 
-from atlassian_client.capabilities import Access, Deployment
-from atlassian_client.config import AtlassianConfig, EnvSecretProvider, FileSecretProvider
+from atlian_assiant.capabilities import Access, Deployment
+from atlian_assiant.config import AtlassianConfig, EnvSecretProvider, FileSecretProvider
 
 
 def test_settings_from_environment(monkeypatch):

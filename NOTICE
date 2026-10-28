@@ -1,0 +1,23 @@
+Atlian-Assiant
+Copyright (c) 2026 Kazi Samin Yeaser. Licensed under the MIT License (see LICENSE).
+
+Trademarks
+----------
+Atlassian, Jira, Confluence, Jira Service Management, Rovo, Forge and related names and logos are trademarks of
+Atlassian Pty Ltd. Slack is a trademark of Slack Technologies, LLC. They are used here only to describe what this
+software works with. Atlian-Assiant is an independent open-source project; it is not affiliated with, endorsed by
+or sponsored by Atlassian or Slack.
+
+Recorded interface data (test fixtures and catalogues)
+------------------------------------------------------
+To test interoperability offline, this repository contains small records of public interfaces of Atlassian
+services and tools. They describe interfaces only (names, parameters, help text, schema shapes) and contain no
+customer data. They remain the property of their respective owners and are included for compatibility testing:
+
+  atlian_assiant/backends/mcp/catalog_v2.json         tool / operation names and input names of the Atlassian Rovo MCP server
+  tests/backends/fixtures/agg_schema_subset.graphql   the subset of the Atlassian GraphQL gateway schema used by the stored queries
+  tests/cli/fixtures/acli_*/                          `--help` output of the Atlassian CLI (acli)
+  tests/cli/fixtures/twg_*/                           `--help` output of the Teamwork Graph CLI (twg)
+  specs/openapi/*.json                                a hand-written subset of Atlassian's published OpenAPI descriptions
+
+Third-party dependencies are installed separately and keep their own licenses (see pyproject.toml).

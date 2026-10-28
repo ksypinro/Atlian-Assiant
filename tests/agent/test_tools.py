@@ -2,7 +2,7 @@
 import jsonschema
 import pytest
 
-from atlassian_client.agent.tools import CURATED
+from atlian_assiant.agent.tools import CURATED
 
 pytestmark = [pytest.mark.layer_01, pytest.mark.anyio]
 
@@ -40,7 +40,12 @@ CASES = {
     "confluence_get_comments": ({"content_id": "123"}, "Typo here"),
     "confluence_list_attachments": ({"content_id": "123"}, "diagram.png"),
     "confluence_read_attachment": ({"attachment_id": "cat2"}, "notes"),
+    "events_list_methods": ({"max_ingress": "none", "implemented_only": True}, "DM-36"),
+    "events_recommend_plan": ({"products": ["jira"], "max_ingress": "none"}, "DM-36"),
+    "events_verify_method": ({"method_id": "DM-03"}, "DM-03"),
     "atlassian_semantic_search": ({"query": "rotate keys"}, "Runbook"),
+    "atlassian_discover_operations": ({"query": "issue watchers"}, "api.jira.getIssueWatchers"),
+    "atlassian_call_operation": ({"operation": "jira.issue.get", "arguments": {"key": "PROJ-1"}}, "Login fails"),
     "atlassian_graph_context": ({"ari_or_url": "https://example.atlassian.net/browse/PROJ-1"}, "Login fails"),
 }
 
@@ -66,14 +71,76 @@ WRITE_CASES = {
 }
 
 
+#: opt-in tools (design 16.3): hidden unless the policy allows their access class. tool -> (arguments, text the result must contain, access class, backend kind)
+OPT_IN_CASES = {
+    "analytics_list_tables": ({}, "jira_issue", "ANALYTICS", "data_lake"),
+    "analytics_query": ({"sql": "SELECT status, COUNT(*) AS n FROM jira_issue GROUP BY status ORDER BY status", "tables": ["jira_issue"]}, "In Progress", "ANALYTICS", "data_lake"),
+    "audit_list_events": ({"limit": 2}, "user_created", "ORG_ADMIN", "org_admin"),
+}
+
+
 def test_every_curated_tool_has_a_case():
-    assert set(CASES) | set(WRITE_CASES) == {s.name for s in CURATED}
+    assert set(CASES) | set(WRITE_CASES) | set(OPT_IN_CASES) == {s.name for s in CURATED}
+
+
+def build_opt_in(access: str):
+    from atlian_assiant import AtlassianConfig, BackendKind, ClientFactory
+    from atlian_assiant.backends.data_lake import DataLakeBackend
+    from atlian_assiant.backends.data_lake.engine import SqliteEngine
+    from atlian_assiant.capabilities import Access
+    from atlian_assiant.policy import AccessPolicy
+    from atlian_assiant.testing import FakeBackend
+    from atlian_assiant.testing.lakesim import fake_share
+    from atlian_assiant.testing.server import ScenarioServer
+
+    pol = AccessPolicy(allowed=frozenset({Access.READ, Access.SEARCH, Access[access]}), allow_credit_consuming=True)
+    org = ClientFactory().backend(BackendKind.ORG_ADMIN, AtlassianConfig(org_id="org-1", org_api_key="org-key-123456"), http=ScenarioServer().client())
+    return ClientFactory().build_async(AtlassianConfig(site="example.atlassian.net"), backends=[], preset="agent", policy=pol,
+                                       extra_backends={BackendKind.REST: FakeBackend(), BackendKind.MCP: FakeBackend(BackendKind.MCP),
+                                                       BackendKind.DATA_LAKE: DataLakeBackend(fake_share(), engine=SqliteEngine()),
+                                                       BackendKind.ORG_ADMIN: org})
+
+
+@pytest.mark.parametrize("name", sorted(OPT_IN_CASES))
+async def test_opt_in_tool_is_hidden_and_refused_by_default_then_works_with_its_access_class(name):
+    args, expected, access, _ = OPT_IN_CASES[name]
+    default = build_opt_in("WRITE")                                                    # read + search (+ write): not ANALYTICS / ORG_ADMIN
+    assert name not in {t["name"] for t in default.tools.export("anthropic")}
+    refused = await default.tools.ainvoke(name, args)
+    assert not refused.ok and refused.error["type"] == "PolicyDeniedError"
+    enabled = build_opt_in(access)
+    assert name in {t["name"] for t in enabled.tools.export("anthropic")}
+    result = await enabled.tools.ainvoke(name, args)
+    assert result.ok, result.text
+    assert expected in result.text and "<atlassian-data" in result.text and "untrusted DATA" in result.text
+
+
+@pytest.mark.parametrize("name", sorted(OPT_IN_CASES))
+def test_opt_in_tool_definition_is_a_valid_documented_json_schema(name):
+    _, _, access, _ = OPT_IN_CASES[name]
+    d = build_opt_in(access).tools.definition(name)
+    jsonschema.Draft202012Validator.check_schema(d["input_schema"])
+    assert "When to use:" in d["description"] and f"Access: {access}" in d["description"] and len(d["name"]) <= 64
+    for param, prop in d["input_schema"]["properties"].items():
+        assert prop.get("description"), f"{name}.{param} has no description"
+
+
+@pytest.mark.parametrize("name", ["analytics_list_tables", "analytics_query"])
+async def test_analytics_tool_results_carry_the_governance_notice_and_name_the_backend(name):
+    args, _, access, _ = OPT_IN_CASES[name]
+    result = await build_opt_in(access).tools.ainvoke(name, args)
+    assert "Governance notice:" in result.text and "NOT row-level permissioned" in result.text
+
+
+async def test_analytics_query_refuses_writes_and_says_how_to_phrase_a_read():
+    result = await build_opt_in("ANALYTICS").tools.ainvoke("analytics_query", {"sql": "DROP TABLE jira_issue", "tables": ["jira_issue"]})
+    assert not result.ok and result.error["type"] == "InvalidRequestError" and "SELECT" in result.error["hint"]
 
 
 @pytest.fixture()
 def writer():
-    from atlassian_client.capabilities import Access
-    from atlassian_client.policy import AccessPolicy, CallbackConfirmation
+    from atlian_assiant.capabilities import Access
+    from atlian_assiant.policy import AccessPolicy, CallbackConfirmation
 
     from .conftest import build
 
@@ -119,8 +186,8 @@ async def test_write_tool_is_hidden_and_refused_under_the_default_read_only_poli
 
 @pytest.mark.parametrize("name", ["jira_delete_issue", "confluence_delete_page"])
 async def test_declined_destructive_tools_do_nothing(name):
-    from atlassian_client.capabilities import Access
-    from atlassian_client.policy import AccessPolicy, DenyAll
+    from atlian_assiant.capabilities import Access
+    from atlian_assiant.policy import AccessPolicy, DenyAll
 
     from .conftest import build
 

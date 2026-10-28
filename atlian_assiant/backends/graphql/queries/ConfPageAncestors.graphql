@@ -1,0 +1,7 @@
+# op: confluence.content.ancestors
+# requires: ConfluenceQueryApi.page, ConfluencePage.ancestors
+query ConfPageAncestors($id: ID!) {
+  confluence {
+    page(id: $id) { ancestors { pageId title status space { spaceId } links { base webUi } } }
+  }
+}

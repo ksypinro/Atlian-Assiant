@@ -1,0 +1,13 @@
+Get available workitem link types.
+
+Usage:
+  acli jira workitem link type [flags]
+
+Examples:
+# Get available workitem link types
+$ acli jira workitem link type
+
+
+Flags:
+  -h, --help   Show help for command
+      --json   Output in JSON format

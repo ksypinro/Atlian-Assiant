@@ -1,0 +1,27 @@
+Get all sprints
+
+Usage:
+  acli jira board list-sprints [flags]
+
+Examples:
+# Get all sprints
+$ acli jira board list-sprints --id 123
+
+# Get all sprints with state filters
+$ acli jira board list-sprints --id 123 --state active,closed
+
+# Get all sprints and output in JSON format
+$ acli jira board list-sprints --id 123 --json
+
+# Get all sprints and output in CSV format
+$ acli jira board list-sprints --id 123 --csv
+
+
+Flags:
+      --csv            Output in CSV format
+  -h, --help           Show help for command
+      --id string      The ID of the board that contains the requested sprints.
+      --json           Output in JSON format
+      --limit int      Limit the number of sprints, if the limit is > than the page size apply pagination. (default 50)
+      --paginate       Loads all sprints and output as they become available.
+      --state string   Filters results to sprints in specified states. Valid values: future, active, closed. You can define multiple states separated by commas, e.g. active,closed

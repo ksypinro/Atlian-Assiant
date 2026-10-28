@@ -1,7 +1,7 @@
 import pytest
 
-from atlassian_client.core.errors import NotFoundError
-from atlassian_client.protocols import JiraIssueReader
+from atlian_assiant.core.errors import NotFoundError
+from atlian_assiant.protocols import JiraIssueReader
 
 from .helpers import drain
 

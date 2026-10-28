@@ -1,0 +1,153 @@
+{
+ "openapi": "3.0.1",
+ "info": {
+  "title": "JSM",
+  "version": "seed-1",
+  "description": "SEED SUBSET modelled on the public Atlassian spec: replace with `python -m tools.codegen --fetch`."
+ },
+ "servers": [
+  {
+   "url": "https://your-domain.atlassian.net"
+  }
+ ],
+ "paths": {
+  "/rest/servicedeskapi/servicedesk/{serviceDeskId}": {
+   "get": {
+    "operationId": "getServiceDeskById",
+    "summary": "Get service desk",
+    "tags": [
+     "Servicedesk"
+    ],
+    "parameters": [
+     {
+      "name": "serviceDeskId",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/rest/servicedeskapi/servicedesk/{serviceDeskId}/queue": {
+   "get": {
+    "operationId": "getQueues",
+    "summary": "Get queues",
+    "tags": [
+     "Queues"
+    ],
+    "parameters": [
+     {
+      "name": "serviceDeskId",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/rest/servicedeskapi/servicedesk/{serviceDeskId}/queue/{queueId}/issue": {
+   "get": {
+    "operationId": "getIssuesInQueue",
+    "summary": "Get issues in queue",
+    "tags": [
+     "Queues"
+    ],
+    "parameters": [
+     {
+      "name": "serviceDeskId",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "queueId",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/rest/servicedeskapi/request/{issueIdOrKey}/participant": {
+   "get": {
+    "operationId": "getRequestParticipants",
+    "summary": "Get participants",
+    "tags": [
+     "Request"
+    ],
+    "parameters": [
+     {
+      "name": "issueIdOrKey",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   },
+   "post": {
+    "operationId": "addRequestParticipants",
+    "summary": "Add participants",
+    "tags": [
+     "Request"
+    ],
+    "parameters": [
+     {
+      "name": "issueIdOrKey",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     }
+    }
+   }
+  },
+  "/rest/servicedeskapi/request/{issueIdOrKey}/approval": {
+   "get": {
+    "operationId": "getApprovals",
+    "summary": "Get approvals",
+    "tags": [
+     "Approval"
+    ],
+    "parameters": [
+     {
+      "name": "issueIdOrKey",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  }
+ }
+}

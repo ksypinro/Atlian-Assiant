@@ -1,0 +1,22 @@
+# op: jira.issue.search
+# requires: JiraQuery.issueSearchStable, JiraIssueConnection.pageInfo
+# experimental: JiraIssueSearch
+query JiraIssueSearch($cloudId: ID!, $jql: String!, $first: Int, $after: String) {
+  jira {
+    issueSearchStable(cloudId: $cloudId, issueSearchInput: {jql: $jql}, first: $first, after: $after) {
+      pageInfo { hasNextPage endCursor }
+      edges { node {
+      id issueId key webUrl summary created updated resolutionDate dueDate
+      status { statusId name statusCategory { statusCategoryId key name } }
+      priority { priorityId name }
+      issueType { issueTypeId name }
+      project { projectId key name }
+      assignee { accountId name }
+      reporter { accountId name }
+      resolution { name }
+      description { adfValue { json } }
+      labels(first: 50) { edges { node { name } } }
+      } }
+    }
+  }
+}

@@ -4,8 +4,8 @@ import stat
 import httpx
 import pytest
 
-from atlassian_client.core.auth import OAuth3LOAuth
-from atlassian_client.core.errors import AuthenticationError
+from atlian_assiant.core.auth import OAuth3LOAuth
+from atlian_assiant.core.errors import AuthenticationError
 
 
 def make(handler, tmp_path, refresh="r1"):

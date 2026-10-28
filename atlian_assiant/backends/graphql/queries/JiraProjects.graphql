@@ -1,0 +1,9 @@
+# op: jira.project.list
+# requires: JiraQuery.allJiraProjects, JiraProject.projectId
+query JiraProjects($cloudId: ID!, $first: Int, $keyword: String) {
+  jira {
+    allJiraProjects(cloudId: $cloudId, first: $first, filter: {keyword: $keyword}) {
+      edges { node { projectId key name projectType } }
+    }
+  }
+}

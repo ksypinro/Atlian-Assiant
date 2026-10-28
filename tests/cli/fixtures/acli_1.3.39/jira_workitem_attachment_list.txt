@@ -1,0 +1,14 @@
+List all the attachments of a workitem.
+
+Usage:
+  acli jira workitem attachment list [flags]
+
+Examples:
+# List work item attachment
+$ acli jira workitem attachment list --key TEST-123
+
+
+Flags:
+  -h, --help         Show help for command
+      --json         Output in JSON format
+      --key string   Workitem key to list the attachments for

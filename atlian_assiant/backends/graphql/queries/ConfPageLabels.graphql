@@ -1,0 +1,7 @@
+# op: confluence.label.list
+# requires: ConfluenceQueryApi.page, ConfluencePage.labels, ConfluenceLabel.label
+query ConfPageLabels($id: ID!) {
+  confluence {
+    page(id: $id) { labels { id label prefix } }
+  }
+}

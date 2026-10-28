@@ -1,7 +1,6 @@
 import pytest
 
-from atlassian_client.core.errors import NotFoundError
-from atlassian_client.protocols import JiraProjectReader
+from atlian_assiant.protocols import JiraProjectReader
 
 pytestmark = [pytest.mark.layer_01]
 

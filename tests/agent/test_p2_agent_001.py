@@ -2,10 +2,19 @@ import builtins
 
 import pytest
 
-from atlassian_client import AtlassianConfig, ClientFactory, operations as ops
-from atlassian_client.capabilities import Access
-from atlassian_client.core.errors import ConfigurationError, ConfirmationDeclinedError
-from atlassian_client.policy import (AccessPolicy, AutoApprove, CallbackConfirmation, CliConfirmation, DenyAll, PlannedAction, PolicyGuard)
+from atlian_assiant import AtlassianConfig, ClientFactory
+from atlian_assiant import operations as ops
+from atlian_assiant.capabilities import Access
+from atlian_assiant.core.errors import ConfigurationError, ConfirmationDeclinedError
+from atlian_assiant.policy import (
+    AccessPolicy,
+    AutoApprove,
+    CallbackConfirmation,
+    CliConfirmation,
+    DenyAll,
+    PlannedAction,
+    PolicyGuard,
+)
 
 pytestmark = [pytest.mark.anyio, pytest.mark.layer_10]
 

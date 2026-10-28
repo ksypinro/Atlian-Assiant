@@ -1,0 +1,10 @@
+Search for work items using JQL
+
+Usage:
+  acli jira workitem search [flags]
+
+Flags:
+      --fields string  Comma-separated list of fields to include
+  -h, --help           help for search
+      --jql string     JQL query to execute
+      --json           Output in JSON format

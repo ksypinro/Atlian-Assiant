@@ -1,14 +1,14 @@
 import httpx
 import pytest
 
-from atlassian_client import AtlassianConfig, BackendKind, ClientFactory
-from atlassian_client import operations as ops
-from atlassian_client.backends.rest_cloud import SUPPORTED, RestBackend, RestBackendFactory
-from atlassian_client.capabilities import Deployment
-from atlassian_client.core.auth import BasicTokenAuth, OAuth3LOAuth, ServiceAccountKeyAuth
-from atlassian_client.core.services import CoreServices, build_cloud_auth
-from atlassian_client.protocols import Backend
-from atlassian_client.testing.server import ScenarioServer
+from atlian_assiant import AtlassianConfig, BackendKind, ClientFactory
+from atlian_assiant import operations as ops
+from atlian_assiant.backends.rest_cloud import SUPPORTED, RestBackend, RestBackendFactory
+from atlian_assiant.capabilities import Deployment
+from atlian_assiant.core.auth import BasicTokenAuth, OAuth3LOAuth, ServiceAccountKeyAuth
+from atlian_assiant.core.services import build_cloud_auth
+from atlian_assiant.protocols import Backend
+from atlian_assiant.testing.server import ScenarioServer
 
 BASIC = dict(site="example.atlassian.net", email="a@b.c", api_token="tok-123456")
 
@@ -43,27 +43,31 @@ def test_auth_selection_priority():
 def test_backend_satisfies_the_backend_protocol_and_reports_catalogued_operations():
     be = ClientFactory().backend(BackendKind.REST, AtlassianConfig(**BASIC))
     assert isinstance(be, Backend) and isinstance(be, RestBackend)
-    assert be.supported_operations() == SUPPORTED and SUPPORTED <= set(ops.CATALOG)
+    from atlian_assiant.backends.rest_cloud.generated import load_index
+
+    assert be.supported_operations() == SUPPORTED | set(load_index()) and SUPPORTED <= set(ops.CATALOG)   # curated + the generated OpenAPI tier
     assert be.deployments == frozenset({Deployment.CLOUD})
 
 
 def test_every_facade_operation_that_rest_serves_is_declared_supported():
-    from atlassian_client.agent.describe import walk_namespaces
-    from atlassian_client.testing import FakeBackend
+    from atlian_assiant.agent.describe import walk_namespaces
+    from atlian_assiant.testing import FakeBackend
 
     client = ClientFactory().build_async(AtlassianConfig(site="x"), backends=[], extra_backends={BackendKind.REST: FakeBackend()})
     facade_ops = {op for _, ns in walk_namespaces(client) for op in ns._OPS}
     not_on_rest = {"confluence.space.instructions.get", "graph.context", "graph.object.get", "graph.search.semantic", "graph.context.add",
                    "jira.issue.hierarchy.convert", "confluence.content.unarchive", "confluence.content.set_status", "confluence.content.public_link.set",
                    "confluence.reaction.add", "confluence.space.instructions.set", "confluence.star.content", "confluence.special.infographic.create",
-                   "confluence.special.infographic.edit", "confluence.special.maui_app.create", "confluence.special.maui_app.edit", "confluence.special.maui_app.get"}   # no REST endpoint; MCP serves them
+                   "confluence.special.infographic.edit", "confluence.special.maui_app.create", "confluence.special.maui_app.edit", "confluence.special.maui_app.get",
+                   "admin.audit.list", "admin.audit.get", "admin.audit.actions", "admin.audit.stream",
+                   "analytics.share.list", "analytics.table.list", "analytics.table.load", "analytics.table.query", "export.confluence.space"}   # no REST endpoint (MCP serves them) / ORG_ADMIN / Data Lake / native export only
     assert facade_ops - not_on_rest <= SUPPORTED, sorted(facade_ops - not_on_rest - SUPPORTED)
     assert not_on_rest.isdisjoint(SUPPORTED)
 
 
 def test_every_supported_operation_is_reachable_through_a_component():
     be = ClientFactory().backend(BackendKind.REST, AtlassianConfig(**BASIC))
-    assert len(be._parts) == 10 and all(p.transport is be.transport for p in be._parts)
+    assert len(be._parts) == 12 and all(p.transport is be.transport for p in be._parts)
 
 
 @pytest.mark.anyio

@@ -1,0 +1,22 @@
+Searches for the Jira dashboards. When multiple search parameters are present, the search ensures that all the parameters are satisfied.
+
+Usage:
+  acli jira dashboard search [flags]
+
+Examples:
+# Searches for the Jira dashboards
+$ acli jira dashboard search
+$ acli jira dashboard search --paginate --csv
+$ acli jira dashboard search --limit 5 --json
+
+# Filter dashboards by owner and project name
+$ acli jira dashboard search --owner user@atlassian.com --name 'report'
+
+Flags:
+      --csv            Generate a CSV output
+  -h, --help           Show help for command
+      --json           Generate a JSON output
+  -l, --limit int      Maximum number of dashboards to fetch (default 30)
+  -n, --name string    String used to perform a case-insensitive partial match with the dashboard name
+  -e, --owner string   Searches for the dashboards that are owned by the provided email
+      --paginate       Fetch all dashboards by paginating through the results

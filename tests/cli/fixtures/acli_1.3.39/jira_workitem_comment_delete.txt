@@ -1,0 +1,14 @@
+Delete a comment for a given workitem
+
+Usage:
+  acli jira workitem comment delete [flags]
+
+Examples:
+# Delete workitem comments
+$ acli jira workitem comment delete --issue TEST-1 --id 10023
+
+
+Flags:
+  -h, --help         Show help for command
+      --id string    Id of the comment to be deleted
+      --key string   Workitem key to delete the links for

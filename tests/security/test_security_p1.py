@@ -1,10 +1,11 @@
 """Executable evidence for the P1 security controls (SEC-02 least privilege, SEC-05 prompt injection)."""
 import pytest
 
-from atlassian_client import Access, operations as ops
-from atlassian_client.agent.tools import DATA_PREAMBLE
-from atlassian_client.core.errors import PolicyDeniedError
-from atlassian_client.policy import AccessPolicy, PolicyGuard, scopes_for
+from atlian_assiant import Access
+from atlian_assiant import operations as ops
+from atlian_assiant.agent.tools import DATA_PREAMBLE
+from atlian_assiant.core.errors import PolicyDeniedError
+from atlian_assiant.policy import AccessPolicy, PolicyGuard, scopes_for
 from tests.agent.conftest import build
 
 pytestmark = pytest.mark.anyio
@@ -18,7 +19,7 @@ def test_sec_02_least_privilege_defaults_scopes_and_hidden_tools():
     assert scopes_for(AccessPolicy(allowed=frozenset({Access.READ}))) == sorted(["read:jira:agent-interface", "read:confluence:agent-interface", "read:all:twg"])
     visible = {t["name"] for t in build(AccessPolicy()).tools.export("anthropic")}
     assert not {"atlassian_semantic_search", "atlassian_graph_context"} & visible
-    from atlassian_client import AtlassianConfig
+    from atlian_assiant import AtlassianConfig
     assert AccessPolicy.from_config(AtlassianConfig()).allowed == frozenset({Access.READ, Access.SEARCH})
 
 

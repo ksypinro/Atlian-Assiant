@@ -1,0 +1,43 @@
+Usage: twg confluence content get [options] [url-or-id]
+
+Read Confluence content (page, blogpost, whiteboard, database, folder,
+custom-content). When --detail is omitted, the server picks a per-type default:
+summary for doc types, a requested format-specific body for supported non-doc
+types, or envelope-only metadata otherwise. Use --detail ai_summary for the
+nullable generated AI summary or --detail full for editing doc types; omit it
+for whiteboard, database, embed, and smart-link body formats.
+
+Arguments:
+  url-or-id           Confluence content URL or numeric content ID
+
+Options:
+  --id <id>           Compatibility alias for positional content ID
+  --detail <detail>   Detail level: summary (excerpt + counts), ai_summary
+                      (generated text or null; no excerpt fallback), outline
+                      (heading tree), full (body in requested format). Omit for
+                      non-doc body formats (whiteboard svg/png, database csv,
+                      embed/smart_link url) and to let the server choose other
+                      per-type defaults.
+  --format <format>   Body format. Agentic doc types: html (default), md (alias:
+                      markdown; lossy). Whiteboards: svg or png. Databases: csv.
+                      Embed/smart_link: url.
+  --body-only         Output only the returned body value, without envelope or
+                      metadata. Use with --output-file to save it to a local
+                      file.
+  --include-metadata  Include extended metadata (author, version, total views,
+                      space-instruction availability)
+  --draft             Fetch the draft version of a page or blogpost
+  -h, --help          display help for command
+
+Synonyms: page get, blogpost get, blog get, live doc get, live_doc get, whiteboard get, database get, embed get, smart link get, smart_link get, folder get, slide get, page read, blog read
+
+Examples:
+  $ twg confluence content get 12345
+  $ twg confluence content get 12345 --detail ai_summary -o json
+  $ twg confluence content get 12345 --detail full --format md -o json
+  $ twg confluence content get 12345 --detail full --format html --body-only --output-file ./page.html
+
+Input: numeric ID or Confluence URL.
+Variants: --detail <summary|ai_summary|outline>; --format <md|svg|png|csv|url> (markdown alias);
+  --body-only (body value only); --draft (page/blogpost); --include-metadata.
+

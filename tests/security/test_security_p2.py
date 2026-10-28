@@ -1,12 +1,13 @@
 """Executable evidence for SEC-06 (destructive actions) from design section 17."""
 import pytest
 
-from atlassian_client import Access, operations as ops
-from atlassian_client.core.errors import ConfirmationDeclinedError, PolicyDeniedError
-from atlassian_client.policy import AccessPolicy, DenyAll, PolicyGuard
-from atlassian_client.testing.mcp_fake import ALL_TOOLS
-from tests.contract.mcp_helpers import make_mcp
+from atlian_assiant import Access
+from atlian_assiant import operations as ops
+from atlian_assiant.core.errors import ConfirmationDeclinedError, PolicyDeniedError
+from atlian_assiant.policy import AccessPolicy, DenyAll, PolicyGuard
+from atlian_assiant.testing.mcp_fake import ALL_TOOLS
 from tests.agent.conftest import build
+from tests.contract.mcp_helpers import make_mcp
 
 pytestmark = pytest.mark.anyio
 

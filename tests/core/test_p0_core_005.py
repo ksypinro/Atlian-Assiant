@@ -1,4 +1,4 @@
-from atlassian_client.core import errors as E
+from atlian_assiant.core import errors as E
 
 
 def test_every_class_of_the_design_exists():

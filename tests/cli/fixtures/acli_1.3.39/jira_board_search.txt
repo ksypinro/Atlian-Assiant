@@ -1,0 +1,22 @@
+Search through all the boards
+
+Usage:
+  acli jira board search [flags]
+
+Flags:
+      --csv               Output in CSV format
+      --filter string     Filter ID. Filters results to boards that are relevant to a filter. Not supported for next-gen boards.
+                          
+  -h, --help              Show help for command
+      --json              Output in JSON format
+      --limit int         Limit the number of boards, if the limit is > than the page size apply pagination. (default 50)
+      --name string       Filters results to boards that match or partially match the specified name.
+                          
+      --order-by string   Ordering of the results by a given field. If not provided, values will not be sorted. Valid values: name, -name, +name
+                          
+      --paginate          Loads all boards and output as they become available.
+      --private           Boolean. Appends private boards to the end of the list. The name and type fields are excluded for security reasons. Default is false.
+                          
+      --project string    Project key. Filters results to boards that are relevant to a project. Relevance means that the jql filter defined in the board contains a reference to a project.
+                          
+      --type string       Filters results to boards of the specified types. Valid values: scrum, kanban, simple.

@@ -1,7 +1,7 @@
 import pytest
 
-from atlassian_client.core.errors import UnsupportedOperationError
-from atlassian_client.protocols import ConfluenceSpaceReader, ConfluenceSpaceWriter
+from atlian_assiant.core.errors import UnsupportedOperationError
+from atlian_assiant.protocols import ConfluenceSpaceReader, ConfluenceSpaceWriter
 
 pytestmark = [pytest.mark.layer_01, pytest.mark.anyio]
 

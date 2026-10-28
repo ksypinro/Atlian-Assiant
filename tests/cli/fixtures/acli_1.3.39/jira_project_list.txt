@@ -1,0 +1,21 @@
+List of projects visible to the user.
+
+Usage:
+  acli jira project list [flags]
+
+Examples:
+# List up to 20 projects recently viewed
+$ acli jira project list --recent
+
+# List all projects
+$ acli jira project list --paginate
+
+# List 50 projects and output in JSON format
+$ acli jira project list --limit 50 --json
+
+Flags:
+  -h, --help        Show help for command
+      --json        Generate a JSON output
+  -l, --limit int   Maximum number of projects to fetch (default 30)
+      --paginate    HTTP requests to fetch all pages of results. The '--limit' is ignored
+      --recent      Returns a list of up to 20 projects recently viewed by the user

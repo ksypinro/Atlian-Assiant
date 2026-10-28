@@ -1,0 +1,89 @@
+Usage: twg rovo search [options] <query>
+
+Exit 0 means the search completed (possibly with no matches); exit 3 means
+coverage is incomplete, including empty partial responses; exit 1 means the
+command failed. Keep results on exit 3 and inspect resultInfo.partial, warnings,
+and failures. An empty partial response does not prove that no matching content
+exists. Do not repeat or rewrite a search to fix a permission failure; use a
+native read for an already-known ID or URL, or report the access gap. [Enriched]
+
+Arguments:
+  query                    Search query text
+
+Options:
+  -n, --limit <number>     Maximum results to return globally across selected
+                           sources, 1-100 (default: 20)
+  --app <app>              Filter by app/product, repeatable (e.g. confluence,
+                           jira, assets, bitbucket, trello, slack, google-drive,
+                           google-calendar, loom, projects, goals, compass,
+                           salesforce) (default: [])
+  --type <type>            Filter by result type, repeatable (e.g. page,
+                           blogpost, issue, asset, asset-schema, asset-type,
+                           pull-request, commit, repository, trello-board,
+                           trello-card, project, goal, component, video, deal,
+                           account, contact, case, campaign) (default: [])
+  --contributor <user>     Filter by contributor. Resolves account ID, identity
+                           user ARI, email, exact display name, or "me" for the
+                           current user before search. Repeatable (default: [])
+  --updated-since <date>   Only results updated after date/duration (YYYY-MM-DD,
+                           ISO, 7d, 2w, 1m)
+  --updated-before <date>  Only results updated before date/duration
+                           (YYYY-MM-DD, ISO, 7d, 2w, 1m)
+  --created-since <date>   Only results created after date/duration (YYYY-MM-DD,
+                           ISO, 7d, 2w, 1m)
+  --created-before <date>  Only results created before date/duration
+                           (YYYY-MM-DD, ISO, 7d, 2w, 1m)
+  --space <key>            Confluence space key filter. Repeatable (default: [])
+  --label <label>          Confluence/third-party label filter. Repeatable
+                           (default: [])
+  --owner <user>           Owner filter for supported products. Accepts account
+                           ID, identity user ARI, email, unambiguous name, or
+                           "me" for the current user. Repeatable (default: [])
+  --mention <user>         Confluence mention filter. Accepts account ID,
+                           identity user ARI, email, unambiguous name, or "me"
+                           for the current user. Repeatable (default: [])
+  --assignee <user>        Jira assignee filter. Accepts account ID, identity
+                           user ARI, email, unambiguous name, or "me" for the
+                           current user. Repeatable (default: [])
+  --reporter <user>        Jira reporter filter. Accepts account ID, identity
+                           user ARI, email, unambiguous name, or "me" for the
+                           current user. Repeatable (default: [])
+  --issue-type <type>      Jira issue type filter, e.g. Epic, Story, Bug.
+                           Repeatable (default: [])
+  --status <category>      Jira status category filter: new, open,
+                           indeterminate, done, undefined. Repeatable (default:
+                           [])
+  --title-only             Only return supported results whose title matches the
+                           query
+  -h, --help               display help for command
+
+Examples:
+  $ twg rovo search "quarterly planning OKRs"
+  $ twg rovo search "deployment runbook" --site mycompany
+  $ twg rovo search "twg" --app confluence --type page --updated-since 7d
+  $ twg rovo search "twg" --contributor user@example.com --updated-since 2026-04-01
+  $ twg rovo search "incident review" --app jira --assignee user@example.com --status open
+  $ twg rovo search "pull request" --app bitbucket --type pull-request --updated-since 14d
+  $ twg rovo search "Process Insights Topics" --app trello --type trello-card
+  $ twg rovo search "acme renewal" --app salesforce --type deal
+  $ twg rovo search "roadmap" --app slack --app google-drive --output json
+  $ twg rovo search "auth token rotation" --output json
+
+Run `twg rovo list-apps` to discover possible app filters. If a selected
+connector is not authenticated, run `twg rovo auth <app>` and retry.
+
+Without --app, search includes built-in Atlassian sources and connectors that
+are ready for the current user. Unavailable optional connectors are omitted
+with warnings. With --app, an unavailable connector is a hard error.
+
+Search returns a relevance-ranked top-K result set, not cursor pagination.
+--limit is a global cap across all sources (default 20, maximum 100). JSON
+output includes resultInfo and sourceCounts; narrow with --app/--type or raise
+--limit when more coverage is needed. sourceCounts[].estimatedMatches is an
+upstream pre-dedup estimate, not an exact or pageable total. partial=true means
+warnings or failures reduced source coverage.
+
+
+Access tier:
+  Enriched: Uses Rovo Search across connected product indexes.
+

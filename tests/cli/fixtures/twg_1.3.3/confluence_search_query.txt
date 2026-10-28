@@ -1,0 +1,40 @@
+Usage: twg confluence search query [options] [cql...]
+
+Search Confluence pages, blog posts, attachments, and comments using CQL
+(Confluence Query Language); supports type, space, title, label, text, date
+filters, and recent created/lastmodified bounds.
+
+Arguments:
+  cql                CQL query shorthand; equivalent to --cql
+
+Options:
+  --cql <query>      CQL (Confluence Query Language) search query
+  --limit <n>        Maximum number of results to return (default: 25) (default:
+                     "25")
+  --cursor <cursor>  Opaque pagination cursor from a previous response's
+                     nextCursor
+  --excerpt          Include matched text excerpts in results
+  -h, --help         display help for command
+
+Examples:
+  $ twg confluence search query --cql "type=page AND space=ENG" --site hello
+  $ twg confluence search query --cql 'type=page AND title = "Runbook"' --site hello
+  $ twg confluence search query --cql 'type=page AND creator = currentUser() AND created >= now("-30d") ORDER BY created DESC' --site hello
+  $ twg confluence search query --cql 'type=page AND text ~ "launch" AND lastmodified >= now("-7d") ORDER BY lastmodified DESC' --limit 10 --excerpt --site hello
+  $ twg confluence search query --cql "type=page AND title~mypage" --limit 10 --excerpt --site hello
+  $ twg confluence search query --cql "type=page AND label=oncall" --site hello -o json
+  $ twg confluence search query --cql "text~'kubernetes'" --limit 20 --excerpt --site hello
+  $ twg confluence search query --cql "type=page AND space=ENG" --limit 25 --cursor "<nextCursor>"  # next page
+
+Guards:
+  Use for: Confluence-specific search needing CQL precision (type, space, title, label, contributor, date filters).
+  Don't use for: cross-product search (use rovo search), Jira issues (use jira workitem query), or simple title-only lookups when you know the page key (use confluence content get).
+
+Synonyms: cql, search confluence, find page, find content, page search, confluence query
+
+Agent notes:
+  For broad page or blog searches without an explicit time window, include a recency
+  clause instead of searching all time. Use created >= now("-30d") for authored or
+  created prompts, and lastmodified >= now("-7d") for recent or popular-change
+  prompts. If that returns no evidence, widen once and state the wider window.
+

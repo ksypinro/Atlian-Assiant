@@ -1,0 +1,8 @@
+# op: jira.project.get
+# requires: JiraQuery.jiraProjectByKey, JiraProject.projectId
+# experimental: JiraProject
+query JiraProject($cloudId: ID!, $key: String!) {
+  jira {
+    jiraProjectByKey(key: $key, cloudId: $cloudId) { projectId key name projectType }
+  }
+}

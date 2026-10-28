@@ -1,0 +1,208 @@
+# Versioned UI selectors for the BROWSER backend (design 10.8). UNVERIFIED against a live Jira / Confluence UI: every page spec below is exercised only by
+# generated fixtures until a human runs the live check. Selector drift is detected, never papered over: a missing required field raises SelectorDriftError.
+#
+# page spec: ready (container) | rows (list pages) | fields (dotted paths; ":int|:float|:bool|:html", "[]" list, "?" optional; a mapping declares nested rows) |
+#            selectors (per-field overrides, primary first). Default selectors for field p of page P: [data-testid='P.p'] then [data-field='p'].
+version: 3
+pages:
+  # ------------------------------------------------------------------------------------------------ Jira issues
+  issue.view:
+    ready: ["[data-testid='issue.view']", "#jira-issue-header"]
+    fields: [id, key, fields.summary, fields.status.name, fields.status.statusCategory.name, "fields.issuetype.name?", fields.project.key, "fields.project.name?",
+             "fields.project.id?", "fields.priority.name?", "fields.assignee.accountId?", "fields.assignee.displayName?", "fields.assignee.emailAddress?",
+             "fields.reporter.accountId?", "fields.reporter.displayName?", "fields.labels[]", "fields.description?", "fields.created?", "fields.updated?"]
+    selectors:
+      key: ["[data-testid='issue.key']", "#key-val", "a[data-issue-key]"]
+      fields.summary: ["[data-testid='issue.summary']", "#summary-val", "h1"]
+  issue.row:
+    rows: ["[data-testid='issue.row']", "tr.issuerow"]
+    fields: [id, key, fields.summary, fields.status.name, "fields.status.statusCategory.name?", "fields.issuetype.name?", "fields.project.id?", "fields.project.key?", "fields.assignee.accountId?",
+             "fields.assignee.displayName?", "fields.labels[]", "fields.updated?"]
+  issue.total:
+    ready: ["[data-testid='issue.results']"]
+    fields: ["count:int"]
+  issue.comments:
+    ready: ["[data-testid='issue.comments']"]
+    rows: ["[data-testid='comment']", "div.activity-comment"]
+    fields: [id, "author.accountId?", "author.displayName?", "author.emailAddress?", "body?", "created?", "updated?"]
+  issue.history:
+    ready: ["[data-testid='issue.history']"]
+    rows: ["[data-testid='history']"]
+    fields: [id, "created?", "author.accountId?", "author.displayName?", {"items[]": {rows: ["[data-testid='history.item']"], fields: [field, "fromString?", "toString?"]}}]
+  issue.worklogs:
+    ready: ["[data-testid='issue.worklogs']"]
+    rows: ["[data-testid='worklog']"]
+    fields: [id, "author.accountId?", "author.displayName?", "timeSpent?", "timeSpentSeconds:int?", "started?"]
+  issue.transitions:
+    ready: ["[data-testid='issue.transitions']"]
+    rows: ["[data-testid='transition']"]
+    fields: [id, name, "to.id?", "to.name?", "to.statusCategory.name?"]
+  issue.attachments:
+    ready: ["[data-testid='issue.attachments']"]
+    rows: ["[data-testid='attachment']"]
+    fields: [id, filename, "size:int?", "mimeType?", "content?", "created?", "author.displayName?"]
+  # ------------------------------------------------------------------------------------------------ projects, filters, dashboards
+  project.row:
+    ready: ["[data-testid='project.list']"]
+    rows: ["[data-testid='project.row']"]
+    fields: [id, key, name, "projectTypeKey?", "lead.accountId?", "lead.displayName?"]
+  project.view:
+    ready: ["[data-testid='project.view']"]
+    fields: [id, key, name, "projectTypeKey?", "lead.accountId?", "lead.displayName?"]
+  project.components:
+    ready: ["[data-testid='project.components']"]
+    rows: ["[data-testid='component']"]
+    fields: [id, name, "lead.accountId?", "lead.displayName?"]
+  project.versions:
+    ready: ["[data-testid='project.versions']"]
+    rows: ["[data-testid='version']"]
+    fields: [id, name, "released:bool?", "releaseDate?"]
+  filter.row:
+    ready: ["[data-testid='filter.list']"]
+    rows: ["[data-testid='filter.row']"]
+    fields: [id, name, "jql?", "owner.accountId?", "owner.displayName?"]
+  dashboard.row:
+    ready: ["[data-testid='dashboard.list']"]
+    rows: ["[data-testid='dashboard.row']"]
+    fields: [id, name, "view?"]
+  # ------------------------------------------------------------------------------------------------ agile
+  board.row:
+    ready: ["[data-testid='board.list']"]
+    rows: ["[data-testid='board.row']"]
+    fields: ["id:int", name, "type?", "location.projectKey?"]
+  board.view:
+    ready: ["[data-testid='board.view']"]
+    fields: ["id:int", name, "type?", "location.projectKey?"]
+  board.config:
+    ready: ["[data-testid='board.config']"]
+    fields: ["id:int", "name?", "filter.id?", {"columnConfig.columns[]": {rows: ["[data-testid='board.column']"], fields: [name]}}]
+  board.issues:
+    ready: ["[data-testid='board.issues']"]
+    rows: ["[data-testid='board.issue']"]
+    fields: [id, key, fields.summary, "fields.status.name?", "fields.project.id?", "fields.project.key?", "fields.assignee.displayName?", "fields.labels[]"]
+  board.backlog:
+    ready: ["[data-testid='board.backlog']"]
+    rows: ["[data-testid='backlog.issue']"]
+    fields: [id, key, fields.summary, "fields.status.name?", "fields.project.id?", "fields.project.key?", "fields.assignee.displayName?", "fields.labels[]"]
+  board.epics:
+    ready: ["[data-testid='board.epics']"]
+    rows: ["[data-testid='epic']"]
+    fields: ["id:int", key, name, "done:bool?"]
+  sprint.row:
+    ready: ["[data-testid='board.sprints']"]
+    rows: ["[data-testid='sprint']"]
+    fields: ["id:int", name, "state?", "goal?", "startDate?", "endDate?"]
+  sprint.view:
+    ready: ["[data-testid='sprint.view']"]
+    fields: ["id:int", name, "state?", "goal?", "startDate?", "endDate?"]
+  sprint.issues:
+    ready: ["[data-testid='sprint.issues']"]
+    rows: ["[data-testid='sprint.issue']"]
+    fields: [id, key, fields.summary, "fields.status.name?", "fields.project.id?", "fields.project.key?", "fields.assignee.displayName?", "fields.labels[]"]
+  # ------------------------------------------------------------------------------------------------ JSM
+  jsm.info:
+    ready: ["[data-testid='jsm.about']"]
+    fields: ["version?", "platformVersion?", "isLicensedForUse:bool?"]
+  jsm.desk:
+    ready: ["[data-testid='jsm.desks']"]
+    rows: ["[data-testid='jsm.desk']"]
+    fields: [id, "projectId?", projectKey, "projectName?"]
+  jsm.requesttype:
+    ready: ["[data-testid='jsm.requesttypes']"]
+    rows: ["[data-testid='jsm.requesttype']"]
+    fields: [id, name, "description?", "serviceDeskId?"]
+  jsm.request.row:
+    ready: ["[data-testid='jsm.requests']"]
+    rows: ["[data-testid='jsm.request']"]
+    fields: [issueId, issueKey, "requestTypeId?", "serviceDeskId?", "currentStatus.status?", "reporter.accountId?", "reporter.displayName?", "createdDate.iso8601?",
+             {"requestFieldValues[]": {rows: ["[data-testid='jsm.request.field']"], fields: [fieldId, "value?"]}}]
+  jsm.request.view:
+    ready: ["[data-testid='jsm.request.view']"]
+    fields: [issueId, issueKey, "requestTypeId?", "serviceDeskId?", "currentStatus.status?", "reporter.accountId?", "reporter.displayName?", "createdDate.iso8601?",
+             {"requestFieldValues[]": {rows: ["[data-testid='jsm.request.field']"], fields: [fieldId, "value?"]}}]
+  jsm.comments:
+    ready: ["[data-testid='jsm.comments']"]
+    rows: ["[data-testid='jsm.comment']"]
+    fields: [id, "author.accountId?", "author.displayName?", "body?", "public:bool", "created.iso8601?"]
+  jsm.sla:
+    ready: ["[data-testid='jsm.slas']"]
+    rows: ["[data-testid='jsm.sla']"]
+    fields: [id, name, "ongoingCycle.breached:bool?", "ongoingCycle.paused:bool?", "ongoingCycle.remainingTime.millis:int?", "ongoingCycle.goalDuration.millis:int?"]
+  jsm.kb:
+    ready: ["[data-testid='jsm.kb']"]
+    rows: ["[data-testid='jsm.kb.article']"]
+    fields: [title, "excerpt?", "content.iframeSrc?"]
+  jsm.org:
+    ready: ["[data-testid='jsm.orgs']"]
+    rows: ["[data-testid='jsm.org']"]
+    fields: [id, "name?"]
+  jsm.customer:
+    ready: ["[data-testid='jsm.customers']"]
+    rows: ["[data-testid='jsm.customer']"]
+    fields: ["accountId?", "displayName?", "emailAddress?"]
+  # ------------------------------------------------------------------------------------------------ Confluence
+  conf.page.view:
+    ready: ["[data-testid='conf.page']", "#main-content"]
+    fields: [id, status, title, "spaceId?", "parentId?", "version.number:int", "version.createdAt?", "version.message?", "authorId?", "createdAt?", "body.storage.value:html?", "_links.webui?"]
+    selectors:
+      body.storage.value: ["[data-testid='conf.page.body']", "#main-content .wiki-content"]
+  conf.page.row:
+    ready: ["[data-testid='conf.pages']"]
+    rows: ["[data-testid='conf.page.row']"]
+    fields: [id, status, title, "spaceId?", "parentId?", "version.number:int?", "_links.webui?"]
+  conf.children:
+    ready: ["[data-testid='conf.children']"]
+    rows: ["[data-testid='conf.child']"]
+    fields: [id, "status?", title, "spaceId?", "parentId?", "version.number:int?"]
+  conf.ancestors:
+    ready: ["[data-testid='conf.ancestors']"]
+    rows: ["[data-testid='conf.ancestor']"]
+    fields: [id, "title?"]
+  conf.versions:
+    ready: ["[data-testid='conf.versions']"]
+    rows: ["[data-testid='conf.version']"]
+    fields: ["number:int", "message?", "createdAt?", "authorId?"]
+  conf.space.row:
+    ready: ["[data-testid='conf.spaces']"]
+    rows: ["[data-testid='conf.space.row']"]
+    fields: [id, key, name, "type?", "status?", "homepageId?"]
+  conf.space.view:
+    ready: ["[data-testid='conf.space']"]
+    fields: [id, key, name, "type?", "status?", "homepageId?"]
+  conf.search:
+    ready: ["[data-testid='conf.results']"]
+    rows: ["[data-testid='conf.result']"]
+    fields: [title, "excerpt?", "url?", "lastModified?", "content.id?", "content.type?", "content.title?"]
+  conf.comments.footer:
+    ready: ["[data-testid='conf.comments.footer']"]
+    rows: ["[data-testid='conf.comment.footer']"]
+    fields: [id, "status?", "version.number:int?", "version.authorId?", "body.storage.value:html?", "resolutionStatus?"]
+  conf.comments.inline:
+    ready: ["[data-testid='conf.comments.inline']"]
+    rows: ["[data-testid='conf.comment.inline']"]
+    fields: [id, "status?", "version.number:int?", "version.authorId?", "body.storage.value:html?", "resolutionStatus?"]
+  conf.attachment.meta:
+    ready: ["[data-testid='conf.attachment.meta']"]
+    fields: [id, title, "mediaType?", "fileSize:int?", "downloadLink?"]
+  conf.attachments:
+    ready: ["[data-testid='conf.attachments']"]
+    rows: ["[data-testid='conf.attachment']"]
+    fields: [id, title, "mediaType?", "fileSize:int?", "downloadLink?", "pageId?", "version.number:int?"]
+  conf.labels:
+    ready: ["[data-testid='conf.labels']"]
+    rows: ["[data-testid='conf.label']"]
+    fields: ["id?", name, "prefix?"]
+  conf.restrictions:
+    ready: ["[data-testid='conf.restrictions']"]
+    rows: ["[data-testid='conf.restriction']"]
+    fields: [operation, "users[]", "groups[]"]
+  conf.macros:
+    ready: ["[data-testid='conf.page']", "#main-content"]
+    fields: [id, title, "body.view.value:html"]
+    selectors:
+      body.view.value: ["[data-testid='conf.page.body']", "#main-content .wiki-content"]
+  # ------------------------------------------------------------------------------------------------ admin
+  webhook.row:
+    ready: ["[data-testid='webhook.list']"]
+    rows: ["[data-testid='webhook.row']"]
+    fields: [name, "url?", "enabled:bool?", "events[]", "self?"]

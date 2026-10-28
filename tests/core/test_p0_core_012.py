@@ -1,9 +1,15 @@
-import json
 
 import pytest
 
-from atlassian_client.formats import (adf_to_markdown, adf_to_text, markdown_to_adf, markdown_to_storage, storage_to_markdown,
-                                      to_agent_text, truncate)
+from atlian_assiant.formats import (
+    adf_to_markdown,
+    adf_to_text,
+    markdown_to_adf,
+    markdown_to_storage,
+    storage_to_markdown,
+    to_agent_text,
+    truncate,
+)
 
 pytestmark = [pytest.mark.layer_08]
 
@@ -58,7 +64,7 @@ def test_truncate_marks_how_much_was_dropped():
 
 
 def test_to_agent_text_uses_model_renderer_and_truncates():
-    from atlassian_client.models.jira import Issue
+    from atlian_assiant.models.jira import Issue
 
     i = Issue(id="1", key="P-1", summary="S" * 50, description_markdown="d" * 200)
     out = to_agent_text(i, max_chars=60)

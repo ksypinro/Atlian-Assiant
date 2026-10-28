@@ -2,9 +2,9 @@ import inspect
 
 import pytest
 
-from atlassian_client import AtlassianClient, AtlassianConfig, BackendKind, ClientFactory
-from atlassian_client.facade.sync import SyncProxy
-from atlassian_client.testing import FakeBackend
+from atlian_assiant import AtlassianClient, AtlassianConfig, BackendKind, ClientFactory
+from atlian_assiant.facade.sync import SyncProxy
+from atlian_assiant.testing import FakeBackend
 
 
 @pytest.fixture()
@@ -41,7 +41,7 @@ def test_namespaces_are_wrapped_and_plain_methods_pass_through(atl):
 
 
 def test_errors_propagate_with_their_type(atl):
-    from atlassian_client.core.errors import NotFoundError
+    from atlian_assiant.core.errors import NotFoundError
 
     with pytest.raises(NotFoundError):
         atl.jira.issues.get("PROJ-999")

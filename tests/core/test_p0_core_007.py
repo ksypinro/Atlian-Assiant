@@ -1,11 +1,17 @@
 import httpx
 import pytest
 
-from atlassian_client.core.auth import BasicTokenAuth, ServiceAccountKeyAuth
-from atlassian_client.core.errors import (AuthenticationError, ConfigurationError, NotFoundError, RateLimitedError, ServerError)
-from atlassian_client.core.http import HttpTransport, RequestSpec
-from atlassian_client.core.retry import RetryPolicy
-from atlassian_client.core.urls import ApiSurface, UrlResolver
+from atlian_assiant.core.auth import BasicTokenAuth, ServiceAccountKeyAuth
+from atlian_assiant.core.errors import (
+    AuthenticationError,
+    ConfigurationError,
+    NotFoundError,
+    RateLimitedError,
+    ServerError,
+)
+from atlian_assiant.core.http import HttpTransport, RequestSpec
+from atlian_assiant.core.retry import RetryPolicy
+from atlian_assiant.core.urls import ApiSurface, UrlResolver
 
 J = ApiSurface.JIRA_PLATFORM
 

@@ -1,0 +1,29 @@
+Assign a work item to an assignee or multiple work items to multiple assignees.
+
+Usage:
+  acli jira workitem assign [flags]
+
+Examples:
+# Assign work item with work item key
+$ acli jira workitem assign --key "KEY-1" --assignee "@me"
+
+# Assign work item with JQL query
+$ acli jira workitem assign --jql "project = TEAM" --assignee "user@atlassian.com"
+
+# Assign work item with filter ID
+$ acli jira workitem assign --filter 10001 --assignee "default"
+
+# Assign work item from file
+$ acli jira workitem assign --from-file "issues.txt" --remove-assignee --json
+
+Flags:
+  -a, --assignee string    Assign work item with email or account ID. Use '@me' to self-assign, 'default' to assign to the project's default assignee
+      --filter string      Filter ID of work items to be assigned
+  -f, --from-file string   Reads the work items to be assigned from the file. The file may contain work items IDs or keys separated by commas, white spaces, or new lines
+  -h, --help               Show help for command
+      --ignore-errors      Ignore the errors and continue
+      --jql string         JQL query for work items to be assigned
+      --json               Generate a JSON output
+  -k, --key string         A list of work item keys to be assigned
+      --remove-assignee    Remove assignee
+  -y, --yes                Confirm assign without prompting

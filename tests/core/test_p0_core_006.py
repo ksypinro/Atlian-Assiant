@@ -1,9 +1,9 @@
 import httpx
 import pytest
 
-from atlassian_client.core.auth import BasicTokenAuth, ServiceAccountKeyAuth
-from atlassian_client.core.errors import ConfigurationError
-from atlassian_client.core.urls import ApiSurface, CloudIdResolver, UrlResolver
+from atlian_assiant.core.auth import BasicTokenAuth, ServiceAccountKeyAuth
+from atlian_assiant.core.errors import ConfigurationError
+from atlian_assiant.core.urls import ApiSurface, CloudIdResolver, UrlResolver
 
 
 def test_basic_auth_urls():

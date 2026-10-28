@@ -1,0 +1,33 @@
+Create a Jira work item to track individual pieces of work that must be completed.
+
+Usage:
+  acli jira workitem create [flags]
+
+Examples:
+# Create work item by supplying a summary, project name and work item type
+$ acli jira workitem create --summary "New Task" --project "TEAM" --type "Task"
+
+# Create work item from file and supplying all work item details
+$ acli jira workitem create --from-file "workitem.txt" --project "PROJ" --type "Bug" --assignee "user@atlassian.com" --label "bug,cli"
+
+# Generate a JSON file that could be used for workitem creation via --from-json flag
+$ acli jira workitem create --generate-json
+
+# Create work item from a JSON file
+$ acli jira workitem create --from-json "workitem.json"
+
+Flags:
+  -a, --assignee string           Assign people by their email or account ID. Use '@me' to self-assign, 'default' to assign to the project's default assignee
+  -d, --description string        Supply a description in plain text or Atlassian Document Format (ADF)
+      --description-file string   Read the description in plain text or Atlassian Document Format (ADF) from the file
+  -e, --editor                    Open a text editor to specify the summary and description
+  -f, --from-file string          Read the work item summary, description from a file
+      --from-json string          Read the work item definition from a JSON file
+      --generate-json             Generates a JSON file that could be used for work item creation
+  -h, --help                      Show help for command
+      --json                      Output in JSON
+  -l, --label strings             Add labels by name and comma-separated
+      --parent string             Parent work item ID
+  -p, --project string            Add the work item to projects by project key
+  -s, --summary string            Supply a summary for the work item
+  -t, --type string               Defines the work item type of the created work item. For example, Epic, Story, Task, Bug

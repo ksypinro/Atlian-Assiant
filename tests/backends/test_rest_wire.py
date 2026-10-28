@@ -3,10 +3,9 @@ import base64
 
 import pytest
 
-from atlassian_client import AtlassianConfig, BackendKind, ClientFactory
-from atlassian_client.core.errors import AuthenticationError, NotFoundError, RateLimitedError
-from atlassian_client.protocols import JiraIssueReader, JiraAgileReader, ConfluenceContentReader
-from atlassian_client.testing.server import ScenarioServer
+from atlian_assiant import AtlassianConfig, BackendKind, ClientFactory
+from atlian_assiant.core.errors import AuthenticationError, NotFoundError, RateLimitedError
+from atlian_assiant.testing.server import ScenarioServer
 
 pytestmark = [pytest.mark.layer_03]
 

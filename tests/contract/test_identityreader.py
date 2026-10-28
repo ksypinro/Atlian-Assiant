@@ -1,6 +1,6 @@
 import pytest
 
-from atlassian_client.protocols import IdentityReader
+from atlian_assiant.protocols import IdentityReader
 
 pytestmark = [pytest.mark.layer_01]
 

@@ -1,13 +1,12 @@
-import httpx
 import pytest
 
-from atlassian_client import AtlassianConfig, BackendKind, ClientFactory, Preset
-from atlassian_client.capabilities import Deployment
-from atlassian_client.core.errors import BackendUnavailableError
-from atlassian_client.factory import Availability, BackendRegistry, default_registry
-from atlassian_client.protocols import JiraIssueReader
-from atlassian_client.testing import FakeBackend
-from atlassian_client.testing.server import ScenarioServer
+from atlian_assiant import AtlassianConfig, BackendKind, ClientFactory, Preset
+from atlian_assiant.capabilities import Deployment
+from atlian_assiant.core.errors import BackendUnavailableError
+from atlian_assiant.factory import Availability, BackendRegistry, default_registry
+from atlian_assiant.protocols import JiraIssueReader
+from atlian_assiant.testing import FakeBackend
+from atlian_assiant.testing.server import ScenarioServer
 
 CFG = dict(site="example.atlassian.net", email="a@b.c", api_token="tok-123456")
 
@@ -18,7 +17,7 @@ class Dummy:
     extra = "mcp"
 
     def availability(self, config):
-        return Availability(False, "pip install 'atlassian-client[mcp]'")
+        return Availability(False, "pip install 'atlian-assiant[mcp]'")
 
     def create(self, config, core):
         raise AssertionError("must not be built when unavailable")
@@ -44,11 +43,13 @@ def test_unavailable_backends_are_skipped_with_a_reason():
     reg.register(Dummy(), replace=True)
     client = ClientFactory(reg).build_async(AtlassianConfig(**CFG), http=ScenarioServer().client())
     d = client.describe()
-    assert d["backends"]["rest"].startswith("ready") and d["backends"]["mcp"] == "unavailable: pip install 'atlassian-client[mcp]'"
+    assert d["backends"]["rest"].startswith("ready") and d["backends"]["mcp"] == "unavailable: pip install 'atlian-assiant[mcp]'"
 
 
 def test_no_credentials_means_rest_unavailable_with_actionable_reason():
-    client = ClientFactory().build_async(AtlassianConfig(site="x.atlassian.net"))
+    # HTTP backends only: locally installed, logged-in CLIs (acli, twg, jira) would otherwise make a backend available
+    cfg = AtlassianConfig(site="x.atlassian.net", enabled_backends=[BackendKind.REST, BackendKind.MCP, BackendKind.GRAPHQL])
+    client = ClientFactory().build_async(cfg)
     assert "ATLASSIAN_EMAIL" in client.describe()["backends"]["rest"]
     assert any("No backend is available" in n for n in client.describe()["notes"])
 

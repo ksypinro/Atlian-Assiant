@@ -1,6 +1,6 @@
 import pytest
 
-from atlassian_client.protocols import JiraJqlTools
+from atlian_assiant.protocols import JiraJqlTools
 
 pytestmark = [pytest.mark.layer_01]
 

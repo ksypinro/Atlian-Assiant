@@ -2,12 +2,20 @@ import json
 
 import pytest
 
-from atlassian_client import Access
-from atlassian_client import operations as ops
-from atlassian_client.agent.tools import CURATED, ToolRegistry, ToolResult, ToolSpec, agent_tool, build_input_model, param_docs, render_result
-from atlassian_client.models.common import Page
-from atlassian_client.models.jira import Issue
-from atlassian_client.policy import AccessPolicy
+from atlian_assiant import Access
+from atlian_assiant import operations as ops
+from atlian_assiant.agent.tools import (
+    CURATED,
+    ToolResult,
+    ToolSpec,
+    agent_tool,
+    build_input_model,
+    param_docs,
+    render_result,
+)
+from atlian_assiant.models.common import Page
+from atlian_assiant.models.jira import Issue
+from atlian_assiant.policy import AccessPolicy
 
 from .conftest import build
 
@@ -16,7 +24,7 @@ pytestmark = pytest.mark.anyio
 
 def test_curated_catalog_has_valid_unique_names_and_resolvable_paths(client):
     names = [s.name for s in CURATED]
-    assert len(names) == len(set(names)) == 50
+    assert len(names) == len(set(names)) == 58
     import re
     assert all(re.fullmatch(r"[a-zA-Z0-9_-]{1,64}", n) for n in names)
     for spec in CURATED:
@@ -25,7 +33,7 @@ def test_curated_catalog_has_valid_unique_names_and_resolvable_paths(client):
 
 def test_exporters_produce_the_four_formats_consistently(client):
     a, o, m, j = (client.tools.export(f) for f in ("anthropic", "openai", "mcp", "json_schema"))
-    assert len(a) == len(o) == len(m) == len(j) == 34
+    assert len(a) == len(o) == len(m) == len(j) == 39
     first = a[2]
     assert set(first) == {"name", "description", "input_schema"}
     assert o[2]["type"] == "function" and o[2]["function"]["parameters"] == first["input_schema"] and o[2]["function"]["name"] == first["name"]
@@ -37,8 +45,8 @@ def test_credit_consuming_tools_are_hidden_unless_allowed():
     visible = {t["name"] for t in build(AccessPolicy()).tools.export("anthropic")}
     assert "atlassian_semantic_search" not in visible and "atlassian_graph_context" not in visible and "jira_get_issue" in visible
     assert {"atlassian_semantic_search", "atlassian_graph_context"} <= {t["name"] for t in build().tools.export("anthropic")}
-    assert len(build(AccessPolicy()).tools.list(include_hidden=True)) == 50
-    assert len(build(AccessPolicy()).tools.export("anthropic")) == 32
+    assert len(build(AccessPolicy()).tools.list(include_hidden=True)) == 58
+    assert len(build(AccessPolicy()).tools.export("anthropic")) == 37
 
 
 def test_list_can_filter_by_access_class(client):
@@ -104,12 +112,12 @@ def test_param_docs_and_input_model(client):
 
 
 def test_sync_client_exposes_blocking_invoke():
-    from atlassian_client import AtlassianClient
+    from atlian_assiant import AtlassianClient
 
     atl = AtlassianClient(build())
     try:
         r = atl.tools.invoke("jira_get_issue", {"key": "PROJ-1"})
         assert isinstance(r, ToolResult) and r.ok
-        assert len(atl.tools.export("anthropic")) == 34
+        assert len(atl.tools.export("anthropic")) == 39
     finally:
         atl.close()

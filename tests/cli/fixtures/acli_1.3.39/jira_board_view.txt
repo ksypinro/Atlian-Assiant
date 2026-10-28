@@ -1,0 +1,14 @@
+View details of a Jira board.
+
+Usage:
+  acli jira board view [flags]
+
+Examples:
+# View board details
+$ acli jira board view --id 123
+
+
+Flags:
+  -h, --help        Show help for command
+      --id string   ID of the board to view (required)
+      --json        Output in JSON format

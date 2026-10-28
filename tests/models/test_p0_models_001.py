@@ -1,14 +1,12 @@
 import ast
 import re
+from datetime import UTC
 from pathlib import Path
 
-import pytest
+from atlian_assiant.models import admin, common, confluence, graph, identity, jira, jsm, webhooks
+from atlian_assiant.models.common import Page, SourceRef, Tombstone, UserRef
 
-from atlassian_client import models
-from atlassian_client.models import admin, common, confluence, graph, identity, jira, jsm, webhooks
-from atlassian_client.models.common import AtlassianModel, Page, SourceRef, Tombstone, UserRef
-
-DESIGN = Path(__file__).parents[2] / "atlassian_client_architecture_design.md"
+DESIGN = Path(__file__).parents[2] / "docs/architecture_design.md"
 MODULES = {"admin": admin, "common": common, "confluence": confluence, "graph": graph, "identity": identity, "jira": jira, "jsm": jsm,
            "webhooks": webhooks}
 
@@ -53,10 +51,10 @@ def test_confluence_restrictions_property_and_tombstone_and_source():
     assert not confluence.Restrictions().restricted and confluence.Restrictions(read_groups=["eng"]).restricted
     t = Tombstone(entity_type="issue", entity_id="PROJ-1")
     assert t.reason == "not_found"
-    from datetime import datetime, timezone
+    from datetime import datetime
 
-    from atlassian_client.capabilities import BackendKind
-    ref = SourceRef(backend=BackendKind.REST, fetched_at=datetime.now(timezone.utc))
+    from atlian_assiant.capabilities import BackendKind
+    ref = SourceRef(backend=BackendKind.REST, fetched_at=datetime.now(UTC))
     assert ref.backend is BackendKind.REST
 
 
@@ -66,7 +64,7 @@ def test_body_input_accepts_markdown_default_and_adf_dict():
 
 
 def test_content_normalizes_all_three_body_formats():
-    from atlassian_client.backends.rest_cloud import normalize as n
+    from atlian_assiant.backends.rest_cloud import normalize as n
 
     adf = '{"version":1,"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Hi"}]}]}'
     c = n.content({"id": "1", "body": {"atlas_doc_format": {"value": adf}}})

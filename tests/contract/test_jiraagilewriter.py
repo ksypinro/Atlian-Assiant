@@ -1,8 +1,8 @@
 import pytest
 
-from atlassian_client.core.errors import InvalidRequestError
-from atlassian_client.models.jira import SprintChange
-from atlassian_client.protocols import JiraAgileReader, JiraAgileWriter
+from atlian_assiant.core.errors import InvalidRequestError
+from atlian_assiant.models.jira import SprintChange
+from atlian_assiant.protocols import JiraAgileReader, JiraAgileWriter
 
 pytestmark = [pytest.mark.layer_01, pytest.mark.anyio]
 

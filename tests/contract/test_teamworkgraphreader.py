@@ -1,9 +1,9 @@
 import pytest
 
-from atlassian_client import BackendKind
-from atlassian_client.protocols import TeamworkGraphReader
-from atlassian_client.protocols.base import implementation_of
-from atlassian_client.testing import FakeBackend
+from atlian_assiant import BackendKind
+from atlian_assiant.protocols import TeamworkGraphReader
+from atlian_assiant.protocols.base import implementation_of
+from atlian_assiant.testing import FakeBackend
 
 from .mcp_helpers import make_mcp
 
@@ -22,7 +22,7 @@ async def test_context_returns_related_objects_and_relationships(reader):
 
 
 async def test_context_honours_max_items(reader):
-    assert len((await reader.get_context("x", max_items=1)).related) <= 1
+    assert len((await reader.get_context("PROJ-1", max_items=1)).related) <= 1
 
 
 async def test_objects_by_ari_or_url_preserve_order(reader):

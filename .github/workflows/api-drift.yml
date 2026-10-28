@@ -1,0 +1,31 @@
+name: api-drift
+# Nightly: fetch the real OpenAPI specs, regenerate the operation index and open a PR with the added / removed / changed operations.
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch: {}
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - name: Fetch specs and regenerate
+        run: |
+          cp atlian_assiant/backends/rest_cloud/generated/operations_index.json /tmp/old_index.json
+          python -m tools.codegen --fetch --write --write-report
+          python -m tools.codegen --diff /tmp/old_index.json > /tmp/drift.json || true
+      - name: Reachability must stay at 100%
+        run: python -m tools.codegen --check-reachability
+      - uses: peter-evans/create-pull-request@v6
+        with:
+          branch: api-drift/nightly
+          title: "API drift: regenerate the OpenAPI operation index"
+          commit-message: "chore: regenerate OpenAPI operation index"
+          body-path: /tmp/drift.json

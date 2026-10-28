@@ -1,10 +1,10 @@
 """Confluence version-checked updates: send current + 1, ConflictError with a re-fetch hint on a lost race (design 10.1)."""
 import pytest
 
-from atlassian_client import AtlassianConfig, BackendKind, ClientFactory
-from atlassian_client.core.errors import ConflictError
-from atlassian_client.models.confluence import ContentUpdate
-from atlassian_client.testing.server import ScenarioServer
+from atlian_assiant import AtlassianConfig, BackendKind, ClientFactory
+from atlian_assiant.core.errors import ConflictError
+from atlian_assiant.models.confluence import ContentUpdate
+from atlian_assiant.testing.server import ScenarioServer
 
 
 def writer(server):
@@ -59,7 +59,7 @@ async def test_title_only_updates_keep_the_existing_body_and_updates_are_not_ret
     body = [r for r in server.requests if r["method"] == "PUT"][-1]["json"]["body"]
     assert body["representation"] == "storage" and "Restart" in body["value"]
     server.fail_next = [(503, {}, "PUT")]
-    from atlassian_client.core.errors import ServerError
+    from atlian_assiant.core.errors import ServerError
 
     with pytest.raises(ServerError):
         await w.update_content("123", ContentUpdate(body="x"))
@@ -68,7 +68,7 @@ async def test_title_only_updates_keep_the_existing_body_and_updates_are_not_ret
 
 @pytest.mark.anyio
 async def test_missing_page_is_not_found():
-    from atlassian_client.core.errors import NotFoundError
+    from atlian_assiant.core.errors import NotFoundError
 
     with pytest.raises(NotFoundError):
         await writer(ScenarioServer()).update_content("999999", ContentUpdate(body="x"))

@@ -1,0 +1,205 @@
+{
+ "openapi": "3.0.1",
+ "info": {
+  "title": "Confluence v2",
+  "version": "seed-1",
+  "description": "SEED SUBSET modelled on the public Atlassian spec: replace with `python -m tools.codegen --fetch`."
+ },
+ "servers": [
+  {
+   "url": "https://your-domain.atlassian.net"
+  }
+ ],
+ "paths": {
+  "/wiki/api/v2/spaces/{id}/properties": {
+   "get": {
+    "operationId": "getSpaceProperties",
+    "summary": "Get space properties",
+    "tags": [
+     "Space Properties"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/wiki/api/v2/pages/{id}/versions": {
+   "get": {
+    "operationId": "getPageVersions",
+    "summary": "Get page versions",
+    "tags": [
+     "Version"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/wiki/api/v2/blogposts": {
+   "get": {
+    "operationId": "getBlogPosts",
+    "summary": "Get blog posts",
+    "tags": [
+     "Blog Post"
+    ],
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   },
+   "post": {
+    "operationId": "createBlogPost",
+    "summary": "Create blog post",
+    "tags": [
+     "Blog Post"
+    ],
+    "parameters": [],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     }
+    }
+   }
+  },
+  "/wiki/api/v2/blogposts/{id}": {
+   "delete": {
+    "operationId": "deleteBlogPost",
+    "summary": "Delete blog post",
+    "tags": [
+     "Blog Post"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/wiki/api/v2/whiteboards/{id}": {
+   "get": {
+    "operationId": "getWhiteboardById",
+    "summary": "Get whiteboard",
+    "tags": [
+     "Whiteboard"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/wiki/api/v2/folders/{id}": {
+   "get": {
+    "operationId": "getFolderById",
+    "summary": "Get folder",
+    "tags": [
+     "Folder"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/wiki/api/v2/custom-content/{id}": {
+   "get": {
+    "operationId": "getCustomContentById",
+    "summary": "Get custom content",
+    "tags": [
+     "Custom Content"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/wiki/api/v2/databases/{id}": {
+   "get": {
+    "operationId": "getDatabaseById",
+    "summary": "Get database",
+    "tags": [
+     "Database"
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  }
+ }
+}

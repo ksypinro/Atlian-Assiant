@@ -1,4 +1,0 @@
-available: []   # add credentials / sandbox / decision once the humans have provided them
-# The reviewer raised the work window to P2 (2026-10-03): P2 work may start although the P0/P1 gates are still unsigned
-# (they wait for live-tenant verification items VER-08/09/11/13). This does NOT sign any gate.
-max_phase: P2

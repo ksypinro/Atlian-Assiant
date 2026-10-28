@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar
 
-from atlassian_client.models.common import Page
+from atlian_assiant.models.common import Page
 
 T = TypeVar("T")
 

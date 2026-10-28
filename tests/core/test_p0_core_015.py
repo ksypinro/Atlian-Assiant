@@ -1,13 +1,19 @@
 import pytest
 
-from atlassian_client import operations as ops
-from atlassian_client.capabilities import BackendKind as B
-from atlassian_client.core.errors import (AtlassianError, BackendUnavailableError, DeploymentMismatchError, NoBackendAvailableError,
-                                          NotFoundError, UnsupportedOperationError)
-from atlassian_client.core.pagination import Cursor
-from atlassian_client.protocols import JiraIssueReader, JiraIssueSearcher, implementation_of
-from atlassian_client.routing import PRESET_ORDERS, CircuitBreaker, Preset, Router, SelectionPolicy
-from atlassian_client.testing import FakeBackend
+from atlian_assiant import operations as ops
+from atlian_assiant.capabilities import BackendKind as B
+from atlian_assiant.core.errors import (
+    AtlassianError,
+    BackendUnavailableError,
+    DeploymentMismatchError,
+    NoBackendAvailableError,
+    NotFoundError,
+    UnsupportedOperationError,
+)
+from atlian_assiant.core.pagination import Cursor
+from atlian_assiant.protocols import JiraIssueReader, JiraIssueSearcher, implementation_of
+from atlian_assiant.routing import PRESET_ORDERS, CircuitBreaker, Preset, Router, SelectionPolicy
+from atlian_assiant.testing import FakeBackend
 
 pytestmark = [pytest.mark.layer_09]
 

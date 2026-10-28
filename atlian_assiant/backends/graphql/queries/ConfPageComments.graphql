@@ -1,0 +1,15 @@
+# op: confluence.comment.list
+# requires: ConfluenceQueryApi.page, ConfluencePage.comments
+# experimental: confluence-agg-beta
+query ConfPageComments($id: ID!, $commentType: ConfluenceCommentType) {
+  confluence {
+    page(id: $id) {
+      comments(commentType: $commentType) {
+        commentId status
+        author { user { accountId } }
+        latestVersion { number createdAt }
+        body { storage { value } }
+      }
+    }
+  }
+}

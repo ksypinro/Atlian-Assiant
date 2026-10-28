@@ -1,0 +1,13 @@
+Delete an attachment from a workitem.
+
+Usage:
+  acli jira workitem attachment delete [flags]
+
+Examples:
+# Delete work item attachment
+$ acli jira workitem attachment delete --id 12345
+
+
+Flags:
+  -h, --help        Show help for command
+      --id string   Id of the attachment to be deleted

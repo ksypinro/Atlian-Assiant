@@ -2,7 +2,7 @@ import dataclasses
 
 import pytest
 
-from atlassian_client.capabilities import Access, BackendKind, Deployment, Operation, Product
+from atlian_assiant.capabilities import Access, BackendKind, Deployment, Operation, Product
 
 
 def test_enum_values_match_design():

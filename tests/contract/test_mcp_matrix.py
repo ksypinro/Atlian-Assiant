@@ -1,11 +1,23 @@
 """One test group per operation x MCP cell of design section 11 (layer 4: MCP)."""
 import pytest
 
-from atlassian_client.core.errors import NotFoundError, UnsupportedOperationError
-from atlassian_client.protocols import (ConfluenceContentReader, ConfluenceSearcher, ConfluenceSpaceReader, ConfluenceTemplateReader,
-                                        JiraAgileReader, JiraIssueReader, JiraIssueSearcher, JiraMetadataReader, JiraProjectReader,
-                                        JiraUserDirectory, JsmReader, SemanticSearcher, TeamworkGraphReader)
-from atlassian_client.protocols.base import implementation_of
+from atlian_assiant.core.errors import NotFoundError, UnsupportedOperationError
+from atlian_assiant.protocols import (
+    ConfluenceContentReader,
+    ConfluenceSearcher,
+    ConfluenceSpaceReader,
+    ConfluenceTemplateReader,
+    JiraAgileReader,
+    JiraIssueReader,
+    JiraIssueSearcher,
+    JiraMetadataReader,
+    JiraProjectReader,
+    JiraUserDirectory,
+    JsmReader,
+    SemanticSearcher,
+    TeamworkGraphReader,
+)
+from atlian_assiant.protocols.base import implementation_of
 
 from .mcp_helpers import make_mcp, same
 
@@ -33,7 +45,7 @@ async def test_jira_issue_search_pages_via_next_page_token_and_rejects_rest_only
     p2 = await reader.search_issues("project = PROJ", limit=2, cursor=p1.next_cursor)
     assert [len(p1.items), len(p2.items)] == [2, 1] and p2.next_cursor is None and p1.next_cursor
     assert t.calls[-1][1]["nextPageToken"] == "2"
-    from atlassian_client.core.pagination import Cursor
+    from atlian_assiant.core.pagination import Cursor
     assert Cursor.decode(p1.next_cursor).backend.value == "mcp"
     with pytest.raises(UnsupportedOperationError):
         await reader.search_issues("x", reconcile_issue_ids=[1])
@@ -110,7 +122,7 @@ async def test_jira_users_match_reference_and_lookup_rules():
     await same(JiraUserDirectory, "search_users", "bob")
     reader, _ = await impl(JiraUserDirectory)
     assert await reader.lookup_account_id("ann@example.com") == "acc-ann"
-    from atlassian_client.core.errors import AmbiguousReferenceError
+    from atlian_assiant.core.errors import AmbiguousReferenceError
     with pytest.raises(AmbiguousReferenceError):
         await reader.lookup_account_id("example.com")
     assert len(await reader.assignable_users(project="PROJ")) == 2
@@ -138,11 +150,14 @@ async def test_jsm_read_is_partial_only_get_request_works():
 
 
 async def test_conf_content_get_matches_reference_formats_and_missing():
-    page = await same(ConfluenceContentReader, "get_content", "123")
+    page = await same(ConfluenceContentReader, "get_content", "123", _ignore=("body_storage",))   # v2 returns markdown / html only
     assert page["body_markdown"] == "# Runbook\n\nRestart **nginx**"
     reader, t = await impl(ConfluenceContentReader)
     assert (await reader.get_content("123", body_format="none")).body_markdown is None
-    assert "bodyFormat" not in t.calls[-1][1]
+    assert t.calls[-1][1].get("detail") == "summary" and "content_format" not in t.calls[-1][1]
+    for unsupported_read in (reader.get_content("123", body_format="storage"), reader.get_content("123", version=2)):
+        with pytest.raises(UnsupportedOperationError):
+            await unsupported_read
     with pytest.raises(NotFoundError):
         await reader.get_content("999999")
     await same(ConfluenceContentReader, "list_content", limit=10)
@@ -153,17 +168,14 @@ async def test_conf_cql_search_pages_with_cursor_and_rejects_empty():
     p1 = await reader.search_cql('space = "ENG"', limit=2)
     p2 = await reader.search_cql('space = "ENG"', limit=2, cursor=p1.next_cursor)
     assert [h.content_id for h in p1.items + p2.items] == ["123", "124", "125"] and p2.next_cursor is None
-    from atlassian_client.core.errors import InvalidRequestError
+    from atlian_assiant.core.errors import InvalidRequestError
     with pytest.raises(InvalidRequestError):
         await reader.search_cql("  ")
 
 
-async def test_conf_tree_is_partial_children_only():
+async def test_conf_tree_is_not_served_by_the_v2_catalogue():
     reader, _ = await impl(ConfluenceContentReader)
-    kids = await reader.list_children("123", limit=1)
-    nxt = await reader.list_children("123", limit=1, cursor=kids.next_cursor)
-    assert [c.id for c in kids.items + nxt.items] == ["124", "125"]
-    for call in (reader.list_ancestors("123"), reader.list_descendants("123")):
+    for call in (reader.list_children("123"), reader.list_ancestors("123"), reader.list_descendants("123")):
         with pytest.raises(UnsupportedOperationError):
             await call
 
@@ -181,9 +193,9 @@ async def test_conf_comments_attachments_labels_match_reference(tmp_path):
     await same(ConfluenceContentReader, "list_attachments", "123")
     got = await reader.download_attachment("cat2", extract_text=True)
     assert got.data == b"notes" and got.text == "notes"
-    assert [lb.name for lb in await reader.list_labels("123")] == ["runbook"]
-    with pytest.raises(UnsupportedOperationError):
-        await reader.get_properties("123")
+    for call in (reader.list_labels("123"), reader.get_properties("123")):        # no label / property read in the v2 catalogue
+        with pytest.raises(UnsupportedOperationError):
+            await call
 
 
 async def test_conf_permissions_match_reference():
@@ -212,15 +224,26 @@ async def test_conf_macros_resolve_returns_rendered_markdown():
 async def test_graph_context_and_objects():
     reader, _ = await impl(TeamworkGraphReader)
     ctx = await reader.get_context("https://example.atlassian.net/browse/PROJ-1", max_items=5)
-    assert ctx.related[0].title == "Login fails" and ctx.relationships == [{"type": "mentions"}]
+    assert ctx.related[0].title == "Login fails" and ctx.relationships[0]["title"] == "Login fails"
     objs = await reader.get_objects(["ari:a", "ari:b"])
     assert [o.ari for o in objs] == ["ari:a", "ari:b"]
-    writer = implementation_of(make_mcp()[0], __import__("atlassian_client.protocols", fromlist=["TeamworkGraphWriter"]).TeamworkGraphWriter)
-    assert await writer.add_context("x", {"a": 1}) is None
+    writer = implementation_of(make_mcp()[0], __import__("atlian_assiant.protocols", fromlist=["TeamworkGraphWriter"]).TeamworkGraphWriter)
+    assert await writer.add_relationship("PROJ-1", "jira-work-item-links-jira-work-item", "PROJ-2") is None
+
+
+def test_graph_object_types_are_inferred_from_aris_urls_and_keys():
+    from atlian_assiant.backends.mcp.backend import graph_object_type
+    from atlian_assiant.core.errors import InvalidRequestError
+
+    assert graph_object_type("PROJ-1") == graph_object_type("https://x.atlassian.net/browse/PROJ-1") == "JiraWorkItem"
+    assert graph_object_type("ari:cloud:confluence::page/123") == "ConfluencePage"
+    assert graph_object_type("https://x.atlassian.net/wiki/spaces/ENG/pages/123/T") == "ConfluencePage"
+    with pytest.raises(InvalidRequestError):
+        graph_object_type("x")
 
 
 async def test_graph_semantic_search_hits():
     reader, t = await impl(SemanticSearcher)
     hits = await reader.semantic_search("rotate keys", products=["confluence"], limit=5)
     assert hits[0].title == "Runbook" and hits[0].score == 0.9
-    assert t.calls[-1][1]["products"] == ["confluence"]
+    assert t.calls[-1][1]["targetApp"] == "confluence"

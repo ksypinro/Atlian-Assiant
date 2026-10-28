@@ -1,0 +1,24 @@
+Usage: twg confluence space get [options] [identifier]
+
+Get a single Confluence space by identifier (space key or numeric ID); returns
+full space metadata including type, status, description, homepage, labels,
+enabled content types, and space instructions.
+
+Arguments:
+  identifier  Confluence space identifier (space key or numeric ID)
+
+Options:
+  --labels    Include space labels
+  -h, --help  display help for command
+
+Examples:
+  $ twg confluence space get ENG --site hello
+  $ twg confluence space get 1234567 --site hello
+  $ twg confluence space get ENG --labels
+
+Guards:
+  Use for: resolving a known space's full metadata by key or ID.
+  Don't use for: listing many spaces (use confluence space list) or page lookups (use confluence content get).
+
+Synonyms: space detail, get space, space info, lookup space
+

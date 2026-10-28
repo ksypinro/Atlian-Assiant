@@ -1,17 +1,25 @@
-import json
 
 import httpx
 import pytest
-from hypothesis import given, settings, strategies as st
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
-from atlassian_client.capabilities import BackendKind
-from atlassian_client.core.auth import BasicTokenAuth
-from atlassian_client.core.errors import InvalidRequestError
-from atlassian_client.core.http import HttpTransport, RequestSpec
-from atlassian_client.core.pagination import (STRATEGIES, CqlPagination, Cursor, JsmPagination, LinkCursorPagination,
-                                              NextPageTokenPagination, OffsetPagination, OrgEventsCursorPagination)
-from atlassian_client.core.urls import ApiSurface, UrlResolver
-from atlassian_client.backends.rest_cloud.base import RestBase
+from atlian_assiant.backends.rest_cloud.base import RestBase
+from atlian_assiant.capabilities import BackendKind
+from atlian_assiant.core.auth import BasicTokenAuth
+from atlian_assiant.core.errors import InvalidRequestError
+from atlian_assiant.core.http import HttpTransport, RequestSpec
+from atlian_assiant.core.pagination import (
+    STRATEGIES,
+    CqlPagination,
+    Cursor,
+    JsmPagination,
+    LinkCursorPagination,
+    NextPageTokenPagination,
+    OffsetPagination,
+    OrgEventsCursorPagination,
+)
+from atlian_assiant.core.urls import ApiSurface, UrlResolver
 
 pytestmark = [pytest.mark.layer_07]
 

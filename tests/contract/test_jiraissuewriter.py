@@ -1,9 +1,9 @@
 import pytest
 
-from atlassian_client.core.errors import InvalidRequestError, NotFoundError, UnsupportedOperationError
-from atlassian_client.models.common import BodyInput
-from atlassian_client.models.jira import IssueDraft, IssueUpdate
-from atlassian_client.protocols import JiraIssueReader, JiraIssueWriter
+from atlian_assiant.core.errors import InvalidRequestError, NotFoundError, UnsupportedOperationError
+from atlian_assiant.models.common import BodyInput
+from atlian_assiant.models.jira import IssueDraft, IssueUpdate
+from atlian_assiant.protocols import JiraIssueReader, JiraIssueWriter
 
 pytestmark = [pytest.mark.layer_01, pytest.mark.anyio]
 

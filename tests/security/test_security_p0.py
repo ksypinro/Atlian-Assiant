@@ -9,12 +9,12 @@ from pathlib import Path
 import httpx
 import pytest
 
-from atlassian_client import AtlassianConfig, BackendKind, ClientFactory
-from atlassian_client.core.auth import BasicTokenAuth, OAuth3LOAuth, ServiceAccountKeyAuth
-from atlassian_client.core.errors import ConfigurationError
-from atlassian_client.core.http import HttpTransport, RequestSpec
-from atlassian_client.core.urls import ApiSurface, UrlResolver
-from atlassian_client.testing.server import ScenarioServer
+from atlian_assiant import AtlassianConfig, BackendKind, ClientFactory
+from atlian_assiant.core.auth import BasicTokenAuth, OAuth3LOAuth, ServiceAccountKeyAuth
+from atlian_assiant.core.errors import ConfigurationError
+from atlian_assiant.core.http import HttpTransport, RequestSpec
+from atlian_assiant.core.urls import ApiSurface, UrlResolver
+from atlian_assiant.testing.server import ScenarioServer
 
 TOKEN = "SuperSecretApiToken123"
 ROOT = Path(__file__).parents[2]
@@ -51,7 +51,7 @@ async def test_sec_04_logs_errors_and_hooks_never_contain_credentials(caplog):
     be = ClientFactory().backend(BackendKind.REST, AtlassianConfig(site="x.atlassian.net", email="me@x.com", api_token=TOKEN), http=srv.client())
     captured = []
     be.transport.telemetry.on_request.append(captured.append)
-    with caplog.at_level(logging.DEBUG, logger="atlassian_client"):
+    with caplog.at_level(logging.DEBUG, logger="atlian_assiant"):
         await be.jira.get_issue("PROJ-1")
         with pytest.raises(Exception) as exc:
             await be.jira.get_issue("PROJ-404")
@@ -69,7 +69,7 @@ def test_sec_20_core_dependencies_are_minimal_heavy_ones_are_optional_extras_and
     assert heavy <= extras
     import subprocess
 
-    code = "import sys, atlassian_client; print(sorted(m for m in sys.modules if m.split('.')[0] in %r))" % (
+    code = "import sys, atlian_assiant; print(sorted(m for m in sys.modules if m.split('.')[0] in %r))" % (
         {"playwright", "boto3", "delta_sharing", "duckdb", "sqlalchemy", "redis", "anthropic", "slack_sdk", "twilio", "mcp"},)
     out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, cwd=ROOT).stdout.strip()
     assert out == "[]"

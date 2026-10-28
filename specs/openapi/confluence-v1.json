@@ -1,0 +1,113 @@
+{
+ "openapi": "3.0.1",
+ "info": {
+  "title": "Confluence v1",
+  "version": "seed-1",
+  "description": "SEED SUBSET modelled on the public Atlassian spec: replace with `python -m tools.codegen --fetch`."
+ },
+ "servers": [
+  {
+   "url": "https://your-domain.atlassian.net"
+  }
+ ],
+ "paths": {
+  "/wiki/rest/api/audit": {
+   "get": {
+    "operationId": "getAuditRecords",
+    "summary": "Get audit records",
+    "tags": [
+     "Audit"
+    ],
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/wiki/rest/api/relation/{relationName}/from/{sourceType}/{sourceKey}/to/{targetType}/{targetKey}": {
+   "get": {
+    "operationId": "getRelationship",
+    "summary": "Get relationship",
+    "tags": [
+     "Relation"
+    ],
+    "parameters": [
+     {
+      "name": "relationName",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "sourceType",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "sourceKey",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "targetType",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "targetKey",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/wiki/rest/api/search/user": {
+   "get": {
+    "operationId": "searchUser",
+    "summary": "Search users",
+    "tags": [
+     "Search"
+    ],
+    "parameters": [
+     {
+      "name": "cql",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/wiki/rest/api/settings/systemInfo": {
+   "get": {
+    "operationId": "getSystemInfo",
+    "summary": "Get system info",
+    "tags": [
+     "Settings"
+    ],
+    "parameters": [],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  }
+ }
+}

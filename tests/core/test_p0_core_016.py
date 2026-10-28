@@ -2,14 +2,10 @@ import inspect
 
 import pytest
 
-from atlassian_client import AtlassianConfig, BackendKind, ClientFactory
-from atlassian_client.agent.describe import walk_namespaces
-from atlassian_client.core.errors import NoBackendAvailableError, UnsupportedOperationError
-from atlassian_client.protocols import (ConfluenceContentReader, ConfluenceSearcher, ConfluenceSpaceReader, ConfluenceTemplateReader,
-                                        JiraAgileReader, JiraIssueReader, JiraIssueSearcher, JiraJqlTools, JiraMetadataReader,
-                                        JiraProjectReader, JiraUserDirectory, JsmReader, RawRequester, SemanticSearcher,
-                                        TeamworkGraphReader)
-from atlassian_client.testing import FakeBackend
+from atlian_assiant import AtlassianConfig, BackendKind, ClientFactory
+from atlian_assiant.agent.describe import walk_namespaces
+from atlian_assiant.core.errors import NoBackendAvailableError, UnsupportedOperationError
+from atlian_assiant.testing import FakeBackend
 from tools import docgen
 
 
@@ -41,7 +37,7 @@ async def test_documented_examples_are_executable_against_the_fake():
 
 def test_positional_parameters_match_the_protocol_they_route_to():
     """Facade signatures must stay in step with the protocols: same positional names, same keyword-only names."""
-    import atlassian_client.protocols as P
+    import atlian_assiant.protocols as P
 
     protos = {n: getattr(P, n) for n in P.__all__ if hasattr(getattr(P, n), '_is_protocol')}
     checked = 0
@@ -81,7 +77,7 @@ async def test_iteration_helpers_and_typed_shortcuts():
     hydrated = await c.confluence.search.search_then_hydrate("x", limit=2)
     assert [p.id for p in hydrated] == ["123", "124"]
     assert (await c.jira.jql.validate("project = PROJ")).valid
-    from atlassian_client.core.errors import InvalidRequestError
+    from atlian_assiant.core.errors import InvalidRequestError
     with pytest.raises(InvalidRequestError) as exc:
         await c.jira.jql.validate("BROKEN (((")
     assert exc.value.details["errors"]
@@ -89,7 +85,7 @@ async def test_iteration_helpers_and_typed_shortcuts():
 
 def test_planned_namespaces_fail_loudly_and_name_the_phase():
     c = make()
-    for ns, phase in ((c.webhooks, "P3"), (c.events, "P3"), (c.analytics, "P5"), (c.mirror, "P6")):
+    for ns, phase in ((c.browser, "P5"),):
         with pytest.raises(UnsupportedOperationError) as exc:
             ns.anything
-        assert phase in str(exc.value) and "TRACKING.md" in exc.value.hint
+        assert phase in str(exc.value) and "operation_coverage.md" in exc.value.hint

@@ -1,7 +1,7 @@
 import pytest
 
-from atlassian_client.core.errors import NotFoundError
-from atlassian_client.protocols import ConfluenceSpaceReader
+from atlian_assiant.core.errors import NotFoundError
+from atlian_assiant.protocols import ConfluenceSpaceReader
 
 pytestmark = [pytest.mark.layer_01]
 
@@ -19,7 +19,7 @@ async def test_spaces_list_get_by_key_and_id(impl):
 
 @pytest.mark.anyio
 async def test_space_instructions_are_unsupported_on_rest_so_the_router_can_fall_back_to_mcp(impl):
-    from atlassian_client.core.errors import UnsupportedOperationError
+    from atlian_assiant.core.errors import UnsupportedOperationError
 
     r = impl(ConfluenceSpaceReader)
     with pytest.raises(UnsupportedOperationError):

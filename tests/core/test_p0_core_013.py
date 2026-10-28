@@ -1,10 +1,10 @@
 import pytest
 
-from atlassian_client.core.cache import MetadataCache
-from atlassian_client.core.errors import AmbiguousReferenceError, NotFoundError
-from atlassian_client.core.resolvers import FieldResolver, SpaceResolver, UserResolver
-from atlassian_client.models.jira import Field
-from atlassian_client.testing import FakeBackend
+from atlian_assiant.core.cache import MetadataCache
+from atlian_assiant.core.errors import AmbiguousReferenceError, NotFoundError
+from atlian_assiant.core.resolvers import FieldResolver, SpaceResolver, UserResolver
+from atlian_assiant.models.jira import Field
+from atlian_assiant.testing import FakeBackend
 
 
 @pytest.mark.anyio

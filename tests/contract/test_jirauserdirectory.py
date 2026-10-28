@@ -1,7 +1,7 @@
 import pytest
 
-from atlassian_client.core.errors import AmbiguousReferenceError, InvalidRequestError, NotFoundError
-from atlassian_client.protocols import JiraUserDirectory
+from atlian_assiant.core.errors import AmbiguousReferenceError, InvalidRequestError, NotFoundError
+from atlian_assiant.protocols import JiraUserDirectory
 
 pytestmark = [pytest.mark.layer_01]
 

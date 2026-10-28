@@ -1,0 +1,53 @@
+# AtlassianClient
+
+> One documented Python client over every way of reading, writing and watching Jira and Confluence (REST, MCP, CLIs, GraphQL,
+> browser, Data Lake, events). 203 operations; 58 curated LLM tools.
+
+## Docs
+
+- [Agent guide](AGENT_GUIDE.md): how to use the tools safely and efficiently
+- [Operations and support matrix](../../../docs/operations.md): every operation and which backend serves it
+- [Delivery methods](../../../docs/delivery_methods.md): event and notification methods (planned)
+- [Architecture design](../../../docs/architecture_design.md)
+
+## Tools
+
+- atlassian_describe: FIRST: learn which backends, sites and permissions are configured.
+- atlassian_whoami: You need the identity (account, site, cloudId) the credentials resolve to.
+- jira_get_issue: You know the exact issue key (e.g. PROJ-123) and need its fields.
+- jira_search_issues: Find issues matching criteria (project, status, assignee, text, dates).
+- jira_count_issues: You need a total number of matching issues without fetching them.
+- jira_get_comments: You need the discussion on one issue.
+- jira_get_changelog: You need to know who changed what on an issue and when.
+- jira_get_worklogs: You need time-tracking entries of an issue.
+- jira_list_transitions: You need the workflow transitions currently available for an issue.
+- jira_get_links: You need issues linked to an issue (blocks, relates to, ...).
+- jira_read_attachment: You need the text of a specific issue attachment (size-capped).
+- jira_validate_jql: Before running JQL that came from a human or an LLM.
+- jira_list_fields: You need field names/ids (e.g. the id of 'Story Points') for queries.
+- jira_get_create_fields: You need to know which fields exist when creating an issue.
+- jira_list_projects: You need project keys.
+- jira_find_user: You need to find a person by name or email.
+- jira_list_boards: You need a board id.
+- jira_list_sprints: You need the active or upcoming sprints of a board.
+- jira_get_sprint_issues: You need the issues in a sprint (e.g. to summarize it).
+- jsm_list_requests: You need to triage or search customer requests.
+- jsm_get_request: You know the request key and need its details.
+- jsm_get_sla: You need SLA status or breaches of a request.
+- jsm_search_kb: You need knowledge-base articles to answer a support question.
+- confluence_search_cql: Find pages by topic, space, label or date.
+- confluence_get_page: You know the page id and need its content.
+- confluence_list_spaces: You need space keys or ids.
+- confluence_get_children: You need the child pages of a page.
+- confluence_get_history: You need the version history of a page.
+- confluence_diff_versions: You need to see what changed between two versions of a page.
+- confluence_get_comments: You need the comments (footer and inline) on a page.
+- confluence_list_attachments: You need to see which files are attached to a page.
+- confluence_read_attachment: You need the text of a specific page attachment (size-capped).
+- events_list_methods: You need to know how Jira/Confluence changes or notifications can reach you, and what is implemented.
+- events_recommend_plan: You need the best delivery methods for stated network constraints (public URL allowed? Forge? MCP only?).
+- events_verify_method: You chose a delivery method and want to know, read-only, what is still missing before it can be set up.
+- atlassian_semantic_search: Fuzzy or cross-product questions where exact JQL/CQL is unknown.
+- atlassian_graph_context: You need RELATIONSHIPS and context around an issue or page.
+- atlassian_discover_operations: A dedicated tool does not cover what you need: search the full operation index (curated + every generated OpenAPI operation).
+- atlassian_call_operation: After atlassian_discover_operations found an operation by id: call it. Same policy, confirmation and dry_run rules as the dedicated tools.

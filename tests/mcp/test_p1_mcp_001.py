@@ -1,14 +1,19 @@
 """MCP session lifecycle, live tool list, tool map and result mapping (layer 4)."""
-import httpx
 import pytest
 
-from atlassian_client import AtlassianConfig, BackendKind, ClientFactory, operations as ops
-from atlassian_client.backends.mcp import ALL_OP_TOOLS, OP_TOOLS, McpBackend, McpToolResult, SdkMcpTransport
-from atlassian_client.core.errors import (ConfigurationError, NoBackendAvailableError, NotFoundError, PermissionDeniedError,
-                                          ServerError, UnsupportedOperationError)
-from atlassian_client.protocols import JiraIssueReader
-from atlassian_client.testing import FakeBackend
-from atlassian_client.testing.mcp_fake import ALL_TOOLS, FakeMcpTransport
+from atlian_assiant import AtlassianConfig, BackendKind, ClientFactory
+from atlian_assiant import operations as ops
+from atlian_assiant.backends.mcp import ALL_OP_TOOLS, OP_TOOLS, McpBackend, McpToolResult, SdkMcpTransport
+from atlian_assiant.core.errors import (
+    ConfigurationError,
+    NoBackendAvailableError,
+    NotFoundError,
+    PermissionDeniedError,
+    ServerError,
+    UnsupportedOperationError,
+)
+from atlian_assiant.testing import FakeBackend
+from atlian_assiant.testing.mcp_fake import ALL_TOOLS, FakeMcpTransport
 from tests.contract.mcp_helpers import CFG, make_mcp
 
 pytestmark = [pytest.mark.layer_04, pytest.mark.anyio]
@@ -17,7 +22,7 @@ pytestmark = [pytest.mark.layer_04, pytest.mark.anyio]
 def test_tool_map_covers_the_documented_read_search_tools_and_only_catalogued_operations():
     assert set(ALL_OP_TOOLS) <= set(ops.CATALOG), sorted(set(ALL_OP_TOOLS) - set(ops.CATALOG))
     assert set(OP_TOOLS) < set(ALL_OP_TOOLS)
-    for tool in ("getJiraIssue", "searchJiraIssuesUsingJql", "getConfluenceContent", "searchConfluence", "getTeamworkGraphContext",
+    for tool in ("getJiraIssue", "searchJiraIssuesUsingJql", "getConfluenceContent", "searchConfluence", "getGraphContext",
                  "listJiraBoards", "diffConfluenceContentVersions", "atlassianUserInfo", "getAccessibleAtlassianResources", "search"):
         assert tool in OP_TOOLS.values(), tool
     assert all(ops.CATALOG[o].access.value in ("read", "search") for o in OP_TOOLS)
@@ -47,11 +52,35 @@ async def test_configured_cloud_id_skips_discovery_and_unknown_site_is_a_clear_e
 
 async def test_live_tool_list_narrows_supported_operations_when_a_permission_group_is_disabled():
     mcp, t = make_mcp()
-    assert mcp.supported_operations() == frozenset(ALL_OP_TOOLS)               # before connecting: the static map
-    t.enabled -= {"searchJiraIssuesUsingJql", "listJiraBoards"}
+    before = mcp.supported_operations()                                         # before connecting: the recorded live surface
+    assert "jira.issue.get" in before and "jira.issue.delete" not in before and before <= frozenset(ALL_OP_TOOLS)
+    t.enabled -= {"searchJiraIssuesUsingJql"}                                  # a direct tool missing from tools/list
     live = await mcp.connect()
-    assert "jira.issue.search" not in live and "jira.agile.board.list" not in live and "jira.issue.get" in live
+    assert "jira.issue.search" not in live and "jira.issue.get" in live
+    assert "jira.agile.board.list" in live          # catalogue operations run via executeRead: only the call itself can tell they are disabled
     assert mcp.supported_operations() == live
+
+
+async def test_a_disabled_catalogue_operation_is_unsupported_at_call_time_so_the_router_falls_back():
+    mcp, t = make_mcp()
+    t.enabled -= {"listJiraBoards"}
+    with pytest.raises(UnsupportedOperationError, match="catalogue"):
+        await mcp.agile.list_boards()
+    assert "listJiraBoards" not in [c[0] for c in t.calls]                         # the server refused it before running anything
+
+
+async def test_catalogue_operations_run_through_the_execute_family_and_the_wrong_family_is_retried():
+    from atlian_assiant.backends.mcp import backend as b
+
+    mcp, t = make_mcp()
+    page = await mcp.jira.list_comments("PROJ-1")
+    assert page.items and "listJiraIssueComments" in [c[0] for c in t.calls]
+    real = b.EXECUTE_TOOLS["listJiraIssueComments"]
+    b.EXECUTE_TOOLS["listJiraIssueComments"] = "executeWrite"                      # a stale catalogue entry: the server names the right tool
+    try:
+        assert (await mcp.jira.list_comments("PROJ-1")).items
+    finally:
+        b.EXECUTE_TOOLS["listJiraIssueComments"] = real
 
 
 async def test_disabled_tool_raises_unsupported_before_sending_so_the_router_can_fall_back():
@@ -81,7 +110,7 @@ async def test_error_mapping_from_tool_errors():
     mcp, t = make_mcp()
     with pytest.raises(NotFoundError):
         await mcp.jira.get_issue("PROJ-404")
-    t.handlers["getJiraCurrentUser"] = lambda a: (_ for _ in ()).throw(__import__("atlassian_client.testing.mcp_fake", fromlist=["ToolError"]).ToolError("403 Forbidden"))
+    t.handlers["getJiraCurrentUser"] = lambda a: (_ for _ in ()).throw(__import__("atlian_assiant.testing.mcp_fake", fromlist=["ToolError"]).ToolError("403 Forbidden"))
     with pytest.raises(PermissionDeniedError) as exc:
         await mcp.jira.myself()
     assert "permission group" in exc.value.hint
@@ -119,7 +148,7 @@ async def test_health_ready_and_unavailable_and_aclose():
 
     class Down(FakeMcpTransport):
         async def list_tools(self):
-            from atlassian_client.core.errors import BackendUnavailableError
+            from atlian_assiant.core.errors import BackendUnavailableError
             raise BackendUnavailableError("connection refused")
 
     assert (await McpBackend(Down(), CFG).health()).status == "unavailable"
@@ -129,7 +158,7 @@ async def test_health_ready_and_unavailable_and_aclose():
 
 def test_every_protocol_the_mcp_backend_claims_resolves_to_a_component():
     mcp, _ = make_mcp()
-    from atlassian_client import protocols as P
+    from atlian_assiant import protocols as P
     claimed = ["JiraIssueReader", "JiraIssueSearcher", "JiraProjectReader", "JiraMetadataReader", "JiraUserDirectory", "JiraAgileReader",
                "JsmReader", "ConfluenceContentReader", "ConfluenceSearcher", "ConfluenceSpaceReader", "ConfluenceTemplateReader",
                "TeamworkGraphReader", "SemanticSearcher", "IdentityReader"]
@@ -140,7 +169,7 @@ def test_every_protocol_the_mcp_backend_claims_resolves_to_a_component():
 
 async def test_identity_through_mcp():
     mcp, _ = make_mcp()
-    from atlassian_client.protocols import IdentityReader
+    from atlian_assiant.protocols import IdentityReader
     me = await mcp.implementation_for(IdentityReader).whoami()
     assert me.account_id == "acc-ann" and me.auth_scheme == "mcp" and me.backend == "mcp"
     assert (await mcp.identity.accessible_resources())[0].id == "cloud-1"

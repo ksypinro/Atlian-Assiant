@@ -6,9 +6,16 @@ import json
 import httpx
 import pytest
 
-from atlassian_client.core.auth import (AuthStrategy, BasicTokenAuth, ConnectJwtAuth, DcBasicAuth, OrgApiKeyAuth,
-                                        PersonalAccessTokenAuth, ServiceAccountKeyAuth)
-from atlassian_client.core.urls import ApiSurface
+from atlian_assiant.core.auth import (
+    AuthStrategy,
+    BasicTokenAuth,
+    ConnectJwtAuth,
+    DcBasicAuth,
+    OrgApiKeyAuth,
+    PersonalAccessTokenAuth,
+    ServiceAccountKeyAuth,
+)
+from atlian_assiant.core.urls import ApiSurface
 
 
 async def header(auth, url="https://example.atlassian.net/rest/api/3/myself", method="GET"):

@@ -1,10 +1,20 @@
 import pytest
 
-from atlassian_client import Access, AtlassianConfig, BackendKind, ClientFactory, operations as ops
-from atlassian_client.core.errors import ConfigurationError, ConfirmationDeclinedError, PolicyDeniedError
-from atlassian_client.policy import (MCP_SCOPES, AccessPolicy, AutoApprove, CallbackConfirmation, DenyAll, PlannedAction, PolicyGuard,
-                                     scope_cql, scope_jql, scopes_for)
-from atlassian_client.testing import FakeBackend
+from atlian_assiant import Access, AtlassianConfig, ClientFactory
+from atlian_assiant import operations as ops
+from atlian_assiant.core.errors import ConfigurationError, ConfirmationDeclinedError, PolicyDeniedError
+from atlian_assiant.policy import (
+    MCP_SCOPES,
+    AccessPolicy,
+    AutoApprove,
+    CallbackConfirmation,
+    DenyAll,
+    PlannedAction,
+    PolicyGuard,
+    scope_cql,
+    scope_jql,
+    scopes_for,
+)
 
 from .conftest import build
 

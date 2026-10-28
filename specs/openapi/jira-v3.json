@@ -1,0 +1,443 @@
+{
+ "openapi": "3.0.1",
+ "info": {
+  "title": "Jira Platform",
+  "version": "seed-1",
+  "description": "SEED SUBSET modelled on the public Atlassian spec: replace with `python -m tools.codegen --fetch`."
+ },
+ "servers": [
+  {
+   "url": "https://your-domain.atlassian.net"
+  }
+ ],
+ "paths": {
+  "/rest/api/3/issue/{issueIdOrKey}": {
+   "get": {
+    "operationId": "getIssue",
+    "summary": "Get issue",
+    "tags": [
+     "Issues"
+    ],
+    "parameters": [
+     {
+      "name": "issueIdOrKey",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "fields",
+      "in": "query",
+      "required": false
+     },
+     {
+      "name": "expand",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   },
+   "delete": {
+    "operationId": "deleteIssue",
+    "summary": "Delete issue",
+    "tags": [
+     "Issues"
+    ],
+    "parameters": [
+     {
+      "name": "issueIdOrKey",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "deleteSubtasks",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/rest/api/3/issue/{issueIdOrKey}/watchers": {
+   "get": {
+    "operationId": "getIssueWatchers",
+    "summary": "Get issue watchers",
+    "tags": [
+     "Issue watchers"
+    ],
+    "parameters": [
+     {
+      "name": "issueIdOrKey",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/rest/api/3/issue/{issueIdOrKey}/votes": {
+   "get": {
+    "operationId": "getVotes",
+    "summary": "Get votes",
+    "tags": [
+     "Issue votes"
+    ],
+    "parameters": [
+     {
+      "name": "issueIdOrKey",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   },
+   "post": {
+    "operationId": "addVote",
+    "summary": "Add vote",
+    "tags": [
+     "Issue votes"
+    ],
+    "parameters": [
+     {
+      "name": "issueIdOrKey",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/rest/api/3/issue/{issueIdOrKey}/worklog": {
+   "get": {
+    "operationId": "getIssueWorklog",
+    "summary": "Get issue worklogs",
+    "tags": [
+     "Issue worklogs"
+    ],
+    "parameters": [
+     {
+      "name": "issueIdOrKey",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/rest/api/3/issue/{issueIdOrKey}/worklog/{id}": {
+   "put": {
+    "operationId": "updateWorklog",
+    "summary": "Update worklog",
+    "tags": [
+     "Issue worklogs"
+    ],
+    "parameters": [
+     {
+      "name": "issueIdOrKey",
+      "in": "path",
+      "required": true
+     },
+     {
+      "name": "id",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     }
+    }
+   }
+  },
+  "/rest/api/3/label": {
+   "get": {
+    "operationId": "getAllLabels",
+    "summary": "Get all labels",
+    "tags": [
+     "Labels"
+    ],
+    "parameters": [
+     {
+      "name": "startAt",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/rest/api/3/resolution": {
+   "get": {
+    "operationId": "getResolutions",
+    "summary": "Get resolutions",
+    "tags": [
+     "Issue resolutions"
+    ],
+    "parameters": [],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/rest/api/3/projectCategory": {
+   "get": {
+    "operationId": "getAllProjectCategories",
+    "summary": "Get project categories",
+    "tags": [
+     "Project categories"
+    ],
+    "parameters": [],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   },
+   "post": {
+    "operationId": "createProjectCategory",
+    "summary": "Create project category",
+    "tags": [
+     "Project categories"
+    ],
+    "parameters": [],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     }
+    }
+   }
+  },
+  "/rest/api/3/group/bulk": {
+   "get": {
+    "operationId": "getAllGroups",
+    "summary": "Bulk get groups",
+    "tags": [
+     "Groups"
+    ],
+    "parameters": [
+     {
+      "name": "startAt",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/rest/api/3/groups/picker": {
+   "get": {
+    "operationId": "findGroups",
+    "summary": "Find groups",
+    "tags": [
+     "Groups"
+    ],
+    "parameters": [
+     {
+      "name": "query",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/rest/api/3/permissions": {
+   "get": {
+    "operationId": "getPermissions",
+    "summary": "Get all permissions",
+    "tags": [
+     "Permissions"
+    ],
+    "parameters": [],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/rest/api/3/mypermissions": {
+   "get": {
+    "operationId": "getMyPermissions",
+    "summary": "Get my permissions",
+    "tags": [
+     "Permissions"
+    ],
+    "parameters": [
+     {
+      "name": "permissions",
+      "in": "query",
+      "required": false
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/rest/api/3/screens": {
+   "get": {
+    "operationId": "getAllScreens",
+    "summary": "Get screens",
+    "tags": [
+     "Screens"
+    ],
+    "parameters": [],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/rest/api/3/notificationscheme": {
+   "get": {
+    "operationId": "getNotificationSchemes",
+    "summary": "Get notification schemes",
+    "tags": [
+     "Issue notification schemes"
+    ],
+    "parameters": [],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/rest/api/3/issuetypescheme": {
+   "get": {
+    "operationId": "getAllIssueTypeSchemes",
+    "summary": "Get all issue type schemes",
+    "tags": [
+     "Issue type schemes"
+    ],
+    "parameters": [],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/rest/api/3/serverInfo": {
+   "get": {
+    "operationId": "getServerInfo",
+    "summary": "Get Jira instance info",
+    "tags": [
+     "Server info"
+    ],
+    "parameters": [],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  },
+  "/rest/api/3/search/jql": {
+   "post": {
+    "operationId": "searchForIssuesUsingJqlEnhancedSearch",
+    "summary": "Search for issues using JQL",
+    "tags": [
+     "Issue search"
+    ],
+    "parameters": [],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    },
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "type": "object"
+       }
+      }
+     }
+    }
+   }
+  },
+  "/rest/api/3/issueLinkType/{issueLinkTypeId}": {
+   "get": {
+    "operationId": "getIssueLinkType",
+    "summary": "Get issue link type",
+    "tags": [
+     "Issue link types"
+    ],
+    "parameters": [
+     {
+      "name": "issueLinkTypeId",
+      "in": "path",
+      "required": true
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "ok"
+     }
+    }
+   }
+  }
+ }
+}

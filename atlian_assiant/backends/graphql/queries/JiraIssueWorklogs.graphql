@@ -1,0 +1,11 @@
+# op: jira.issue.worklogs.list
+# requires: JiraQuery.issueByKey, JiraIssue.worklogs, JiraWorklog.timeSpent
+query JiraIssueWorklogs($cloudId: ID!, $key: String!, $first: Int) {
+  jira {
+    issueByKey(key: $key, cloudId: $cloudId) {
+      worklogs(first: $first) {
+        edges { node { worklogId created updated startDate author { accountId name } timeSpent { timeInSeconds } workDescription { adfValue { json } } } }
+      }
+    }
+  }
+}

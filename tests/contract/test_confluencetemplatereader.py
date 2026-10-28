@@ -1,7 +1,7 @@
 import pytest
 
-from atlassian_client.core.errors import NotFoundError
-from atlassian_client.protocols import ConfluenceTemplateReader
+from atlian_assiant.core.errors import NotFoundError
+from atlian_assiant.protocols import ConfluenceTemplateReader
 
 pytestmark = [pytest.mark.layer_01]
 

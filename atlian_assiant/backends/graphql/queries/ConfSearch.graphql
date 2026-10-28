@@ -1,0 +1,7 @@
+# op: confluence.search.cql
+# requires: Query.confluence_search, ConfluenceSearchConnection.nodes
+query ConfSearch($cloudId: ID!, $cql: String!, $first: Int) {
+  confluence_search(cloudId: $cloudId, cql: $cql, first: $first, excerpt: "highlight") {
+    nodes { title url excerpt entityType lastModified score content { id type title status } }
+  }
+}

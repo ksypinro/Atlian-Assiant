@@ -1,0 +1,5 @@
+# op: jira.user.myself
+# requires: Query.me, AuthenticationContext.user
+query JiraMyself {
+  me { user { accountId name ... on AtlassianAccountUser { email } } }
+}

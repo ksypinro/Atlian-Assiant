@@ -1,0 +1,18 @@
+# op: jira.issue.get
+# requires: JiraQuery.issueByKey, JiraIssue.summary, JiraIssue.description
+query JiraIssueGet($cloudId: ID!, $key: String!) {
+  jira {
+    issueByKey(key: $key, cloudId: $cloudId) {
+      id issueId key webUrl summary created updated resolutionDate dueDate
+      status { statusId name statusCategory { statusCategoryId key name } }
+      priority { priorityId name }
+      issueType { issueTypeId name }
+      project { projectId key name }
+      assignee { accountId name }
+      reporter { accountId name }
+      resolution { name }
+      description { adfValue { json } }
+      labels(first: 50) { edges { node { name } } }
+    }
+  }
+}

@@ -1,6 +1,6 @@
 import pytest
 
-from atlassian_client.protocols import RawRequester
+from atlian_assiant.protocols import RawRequester
 
 pytestmark = [pytest.mark.layer_01]
 

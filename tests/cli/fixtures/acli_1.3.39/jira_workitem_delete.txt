@@ -1,0 +1,27 @@
+Delete a work item or multiple work items.
+
+Usage:
+  acli jira workitem delete [flags]
+
+Examples:
+# Delete work item with work item keys
+$ acli jira workitem delete --key "KEY-1,KEY-2"
+
+# Delete work item with JQL query
+$ acli jira workitem delete --jql "project = TEAM"
+
+# Delete work item with Filter ID
+$ acli jira workitem delete --filter 10001
+
+# Delete work item by reading from a file
+$ acli jira workitem delete --from-file "issues.txt" --yes
+
+Flags:
+      --filter string      Filter ID of work items to be deleted
+  -f, --from-file string   Reads the work items to be deleted from the file. The file may contain work item IDs or keys separated by commas, white spaces, or new lines
+  -h, --help               Show help for command
+      --ignore-errors      Ignore the errors and continue
+      --jql string         JQL query for work items to be deleted
+      --json               Generate a JSON output
+  -k, --key string         A list of work item keys to be deleted
+  -y, --yes                Confirm delete without prompting

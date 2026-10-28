@@ -1,0 +1,8 @@
+# op: jira.issue.count
+# requires: JiraQuery.issueSearchStable, JiraIssueConnection.totalCount
+# experimental: JiraIssueSearch
+query JiraIssueCount($cloudId: ID!, $jql: String!) {
+  jira {
+    issueSearchStable(cloudId: $cloudId, issueSearchInput: {jql: $jql}, first: 1) { totalCount }
+  }
+}

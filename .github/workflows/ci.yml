@@ -1,0 +1,44 @@
+name: ci
+# Tests, typing, lint and generated-file checks. Runs offline against the built-in fakes: no Atlassian credentials are used.
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install -e ".[dev]"
+      - run: pytest -q
+      - run: mypy atlian_assiant
+      - run: ruff check atlian_assiant deploy
+      - name: Generated files are up to date
+        run: |
+          python -m tools.docgen --check
+          python -m tools.gen_stubs --check
+          python -m tools.api_surface --check
+          python -m tools.gql_schema_subset --check
+          python -m tools.codegen --check
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install build
+      - run: python -m build
+      - name: The wheel installs and imports in a clean environment
+        run: |
+          python -m venv /tmp/clean && /tmp/clean/bin/pip install dist/*.whl
+          cd /tmp && /tmp/clean/bin/python -c "import atlian_assiant, sys; print(atlian_assiant.__version__)" && /tmp/clean/bin/atlian-assiant --help > /dev/null

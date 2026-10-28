@@ -1,0 +1,14 @@
+List watchers of an issue
+
+Usage:
+  acli jira workitem list-watchers [flags]
+
+Examples:
+# List watchers of an issue
+$ acli jira workitem list-watchers --key TEST-1
+
+
+Flags:
+  -h, --help         Show help for command
+      --json         Output in JSON format
+      --key string   Issue key to list watchers for

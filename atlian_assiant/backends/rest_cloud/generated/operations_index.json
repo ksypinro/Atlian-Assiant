@@ -1,0 +1,997 @@
+{
+ "generated_by": "tools/codegen.py",
+ "operations": [
+  {
+   "access": "delete",
+   "api": "agile",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.agile.deleteBoard",
+   "method": "DELETE",
+   "operationId": "deleteBoard",
+   "params": [
+    [
+     "boardId",
+     "path",
+     true
+    ]
+   ],
+   "path": "/board/{boardId}",
+   "summary": "Delete board",
+   "tags": [
+    "Board"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "agile",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.agile.getAllQuickFilters",
+   "method": "GET",
+   "operationId": "getAllQuickFilters",
+   "params": [
+    [
+     "boardId",
+     "path",
+     true
+    ]
+   ],
+   "path": "/board/{boardId}/quickfilter",
+   "summary": "Get all quick filters",
+   "tags": [
+    "Board"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "agile",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.agile.getBoard",
+   "method": "GET",
+   "operationId": "getBoard",
+   "params": [
+    [
+     "boardId",
+     "path",
+     true
+    ]
+   ],
+   "path": "/board/{boardId}",
+   "summary": "Get board",
+   "tags": [
+    "Board"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "agile",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.agile.getBoardProperty",
+   "method": "GET",
+   "operationId": "getBoardProperty",
+   "params": [
+    [
+     "boardId",
+     "path",
+     true
+    ],
+    [
+     "propertyKey",
+     "path",
+     true
+    ]
+   ],
+   "path": "/board/{boardId}/properties/{propertyKey}",
+   "summary": "Get board property",
+   "tags": [
+    "Board"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "agile",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.agile.getEpic",
+   "method": "GET",
+   "operationId": "getEpic",
+   "params": [
+    [
+     "epicIdOrKey",
+     "path",
+     true
+    ]
+   ],
+   "path": "/epic/{epicIdOrKey}",
+   "summary": "Get epic",
+   "tags": [
+    "Epic"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "agile",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.agile.getIssuesForEpic",
+   "method": "GET",
+   "operationId": "getIssuesForEpic",
+   "params": [
+    [
+     "epicIdOrKey",
+     "path",
+     true
+    ]
+   ],
+   "path": "/epic/{epicIdOrKey}/issue",
+   "summary": "Get issues for epic",
+   "tags": [
+    "Epic"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "agile",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.agile.getSprint",
+   "method": "GET",
+   "operationId": "getSprint",
+   "params": [
+    [
+     "sprintId",
+     "path",
+     true
+    ]
+   ],
+   "path": "/sprint/{sprintId}",
+   "summary": "Get sprint",
+   "tags": [
+    "Sprint"
+   ]
+  },
+  {
+   "access": "write",
+   "api": "agile",
+   "deprecated": false,
+   "has_body": true,
+   "id": "api.agile.updateSprint",
+   "method": "PUT",
+   "operationId": "updateSprint",
+   "params": [
+    [
+     "sprintId",
+     "path",
+     true
+    ]
+   ],
+   "path": "/sprint/{sprintId}",
+   "summary": "Update sprint",
+   "tags": [
+    "Sprint"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "confluence_v1",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.confluence_v1.getAuditRecords",
+   "method": "GET",
+   "operationId": "getAuditRecords",
+   "params": [
+    [
+     "limit",
+     "query",
+     false
+    ]
+   ],
+   "path": "/audit",
+   "summary": "Get audit records",
+   "tags": [
+    "Audit"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "confluence_v1",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.confluence_v1.getRelationship",
+   "method": "GET",
+   "operationId": "getRelationship",
+   "params": [
+    [
+     "relationName",
+     "path",
+     true
+    ],
+    [
+     "sourceType",
+     "path",
+     true
+    ],
+    [
+     "sourceKey",
+     "path",
+     true
+    ],
+    [
+     "targetType",
+     "path",
+     true
+    ],
+    [
+     "targetKey",
+     "path",
+     true
+    ]
+   ],
+   "path": "/relation/{relationName}/from/{sourceType}/{sourceKey}/to/{targetType}/{targetKey}",
+   "summary": "Get relationship",
+   "tags": [
+    "Relation"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "confluence_v1",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.confluence_v1.getSystemInfo",
+   "method": "GET",
+   "operationId": "getSystemInfo",
+   "params": [],
+   "path": "/settings/systemInfo",
+   "summary": "Get system info",
+   "tags": [
+    "Settings"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "confluence_v1",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.confluence_v1.searchUser",
+   "method": "GET",
+   "operationId": "searchUser",
+   "params": [
+    [
+     "cql",
+     "query",
+     false
+    ]
+   ],
+   "path": "/search/user",
+   "summary": "Search users",
+   "tags": [
+    "Search"
+   ]
+  },
+  {
+   "access": "write",
+   "api": "confluence_v2",
+   "deprecated": false,
+   "has_body": true,
+   "id": "api.confluence_v2.createBlogPost",
+   "method": "POST",
+   "operationId": "createBlogPost",
+   "params": [],
+   "path": "/blogposts",
+   "summary": "Create blog post",
+   "tags": [
+    "Blog Post"
+   ]
+  },
+  {
+   "access": "delete",
+   "api": "confluence_v2",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.confluence_v2.deleteBlogPost",
+   "method": "DELETE",
+   "operationId": "deleteBlogPost",
+   "params": [
+    [
+     "id",
+     "path",
+     true
+    ]
+   ],
+   "path": "/blogposts/{id}",
+   "summary": "Delete blog post",
+   "tags": [
+    "Blog Post"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "confluence_v2",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.confluence_v2.getBlogPosts",
+   "method": "GET",
+   "operationId": "getBlogPosts",
+   "params": [
+    [
+     "limit",
+     "query",
+     false
+    ]
+   ],
+   "path": "/blogposts",
+   "summary": "Get blog posts",
+   "tags": [
+    "Blog Post"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "confluence_v2",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.confluence_v2.getCustomContentById",
+   "method": "GET",
+   "operationId": "getCustomContentById",
+   "params": [
+    [
+     "id",
+     "path",
+     true
+    ]
+   ],
+   "path": "/custom-content/{id}",
+   "summary": "Get custom content",
+   "tags": [
+    "Custom Content"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "confluence_v2",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.confluence_v2.getDatabaseById",
+   "method": "GET",
+   "operationId": "getDatabaseById",
+   "params": [
+    [
+     "id",
+     "path",
+     true
+    ]
+   ],
+   "path": "/databases/{id}",
+   "summary": "Get database",
+   "tags": [
+    "Database"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "confluence_v2",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.confluence_v2.getFolderById",
+   "method": "GET",
+   "operationId": "getFolderById",
+   "params": [
+    [
+     "id",
+     "path",
+     true
+    ]
+   ],
+   "path": "/folders/{id}",
+   "summary": "Get folder",
+   "tags": [
+    "Folder"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "confluence_v2",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.confluence_v2.getPageVersions",
+   "method": "GET",
+   "operationId": "getPageVersions",
+   "params": [
+    [
+     "id",
+     "path",
+     true
+    ]
+   ],
+   "path": "/pages/{id}/versions",
+   "summary": "Get page versions",
+   "tags": [
+    "Version"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "confluence_v2",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.confluence_v2.getSpaceProperties",
+   "method": "GET",
+   "operationId": "getSpaceProperties",
+   "params": [
+    [
+     "id",
+     "path",
+     true
+    ]
+   ],
+   "path": "/spaces/{id}/properties",
+   "summary": "Get space properties",
+   "tags": [
+    "Space Properties"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "confluence_v2",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.confluence_v2.getWhiteboardById",
+   "method": "GET",
+   "operationId": "getWhiteboardById",
+   "params": [
+    [
+     "id",
+     "path",
+     true
+    ]
+   ],
+   "path": "/whiteboards/{id}",
+   "summary": "Get whiteboard",
+   "tags": [
+    "Whiteboard"
+   ]
+  },
+  {
+   "access": "write",
+   "api": "jira",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.jira.addVote",
+   "method": "POST",
+   "operationId": "addVote",
+   "params": [
+    [
+     "issueIdOrKey",
+     "path",
+     true
+    ]
+   ],
+   "path": "/issue/{issueIdOrKey}/votes",
+   "summary": "Add vote",
+   "tags": [
+    "Issue votes"
+   ]
+  },
+  {
+   "access": "write",
+   "api": "jira",
+   "deprecated": false,
+   "has_body": true,
+   "id": "api.jira.createProjectCategory",
+   "method": "POST",
+   "operationId": "createProjectCategory",
+   "params": [],
+   "path": "/projectCategory",
+   "summary": "Create project category",
+   "tags": [
+    "Project categories"
+   ]
+  },
+  {
+   "access": "delete",
+   "api": "jira",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.jira.deleteIssue",
+   "method": "DELETE",
+   "operationId": "deleteIssue",
+   "params": [
+    [
+     "issueIdOrKey",
+     "path",
+     true
+    ],
+    [
+     "deleteSubtasks",
+     "query",
+     false
+    ]
+   ],
+   "path": "/issue/{issueIdOrKey}",
+   "summary": "Delete issue",
+   "tags": [
+    "Issues"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "jira",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.jira.findGroups",
+   "method": "GET",
+   "operationId": "findGroups",
+   "params": [
+    [
+     "query",
+     "query",
+     false
+    ]
+   ],
+   "path": "/groups/picker",
+   "summary": "Find groups",
+   "tags": [
+    "Groups"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "jira",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.jira.getAllGroups",
+   "method": "GET",
+   "operationId": "getAllGroups",
+   "params": [
+    [
+     "startAt",
+     "query",
+     false
+    ]
+   ],
+   "path": "/group/bulk",
+   "summary": "Bulk get groups",
+   "tags": [
+    "Groups"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "jira",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.jira.getAllIssueTypeSchemes",
+   "method": "GET",
+   "operationId": "getAllIssueTypeSchemes",
+   "params": [],
+   "path": "/issuetypescheme",
+   "summary": "Get all issue type schemes",
+   "tags": [
+    "Issue type schemes"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "jira",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.jira.getAllLabels",
+   "method": "GET",
+   "operationId": "getAllLabels",
+   "params": [
+    [
+     "startAt",
+     "query",
+     false
+    ]
+   ],
+   "path": "/label",
+   "summary": "Get all labels",
+   "tags": [
+    "Labels"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "jira",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.jira.getAllProjectCategories",
+   "method": "GET",
+   "operationId": "getAllProjectCategories",
+   "params": [],
+   "path": "/projectCategory",
+   "summary": "Get project categories",
+   "tags": [
+    "Project categories"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "jira",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.jira.getAllScreens",
+   "method": "GET",
+   "operationId": "getAllScreens",
+   "params": [],
+   "path": "/screens",
+   "summary": "Get screens",
+   "tags": [
+    "Screens"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "jira",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.jira.getIssue",
+   "method": "GET",
+   "operationId": "getIssue",
+   "params": [
+    [
+     "issueIdOrKey",
+     "path",
+     true
+    ],
+    [
+     "fields",
+     "query",
+     false
+    ],
+    [
+     "expand",
+     "query",
+     false
+    ]
+   ],
+   "path": "/issue/{issueIdOrKey}",
+   "summary": "Get issue",
+   "tags": [
+    "Issues"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "jira",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.jira.getIssueLinkType",
+   "method": "GET",
+   "operationId": "getIssueLinkType",
+   "params": [
+    [
+     "issueLinkTypeId",
+     "path",
+     true
+    ]
+   ],
+   "path": "/issueLinkType/{issueLinkTypeId}",
+   "summary": "Get issue link type",
+   "tags": [
+    "Issue link types"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "jira",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.jira.getIssueWatchers",
+   "method": "GET",
+   "operationId": "getIssueWatchers",
+   "params": [
+    [
+     "issueIdOrKey",
+     "path",
+     true
+    ]
+   ],
+   "path": "/issue/{issueIdOrKey}/watchers",
+   "summary": "Get issue watchers",
+   "tags": [
+    "Issue watchers"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "jira",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.jira.getIssueWorklog",
+   "method": "GET",
+   "operationId": "getIssueWorklog",
+   "params": [
+    [
+     "issueIdOrKey",
+     "path",
+     true
+    ]
+   ],
+   "path": "/issue/{issueIdOrKey}/worklog",
+   "summary": "Get issue worklogs",
+   "tags": [
+    "Issue worklogs"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "jira",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.jira.getMyPermissions",
+   "method": "GET",
+   "operationId": "getMyPermissions",
+   "params": [
+    [
+     "permissions",
+     "query",
+     false
+    ]
+   ],
+   "path": "/mypermissions",
+   "summary": "Get my permissions",
+   "tags": [
+    "Permissions"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "jira",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.jira.getNotificationSchemes",
+   "method": "GET",
+   "operationId": "getNotificationSchemes",
+   "params": [],
+   "path": "/notificationscheme",
+   "summary": "Get notification schemes",
+   "tags": [
+    "Issue notification schemes"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "jira",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.jira.getPermissions",
+   "method": "GET",
+   "operationId": "getPermissions",
+   "params": [],
+   "path": "/permissions",
+   "summary": "Get all permissions",
+   "tags": [
+    "Permissions"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "jira",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.jira.getResolutions",
+   "method": "GET",
+   "operationId": "getResolutions",
+   "params": [],
+   "path": "/resolution",
+   "summary": "Get resolutions",
+   "tags": [
+    "Issue resolutions"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "jira",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.jira.getServerInfo",
+   "method": "GET",
+   "operationId": "getServerInfo",
+   "params": [],
+   "path": "/serverInfo",
+   "summary": "Get Jira instance info",
+   "tags": [
+    "Server info"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "jira",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.jira.getVotes",
+   "method": "GET",
+   "operationId": "getVotes",
+   "params": [
+    [
+     "issueIdOrKey",
+     "path",
+     true
+    ]
+   ],
+   "path": "/issue/{issueIdOrKey}/votes",
+   "summary": "Get votes",
+   "tags": [
+    "Issue votes"
+   ]
+  },
+  {
+   "access": "search",
+   "api": "jira",
+   "deprecated": false,
+   "has_body": true,
+   "id": "api.jira.searchForIssuesUsingJqlEnhancedSearch",
+   "method": "POST",
+   "operationId": "searchForIssuesUsingJqlEnhancedSearch",
+   "params": [],
+   "path": "/search/jql",
+   "summary": "Search for issues using JQL",
+   "tags": [
+    "Issue search"
+   ]
+  },
+  {
+   "access": "write",
+   "api": "jira",
+   "deprecated": false,
+   "has_body": true,
+   "id": "api.jira.updateWorklog",
+   "method": "PUT",
+   "operationId": "updateWorklog",
+   "params": [
+    [
+     "issueIdOrKey",
+     "path",
+     true
+    ],
+    [
+     "id",
+     "path",
+     true
+    ]
+   ],
+   "path": "/issue/{issueIdOrKey}/worklog/{id}",
+   "summary": "Update worklog",
+   "tags": [
+    "Issue worklogs"
+   ]
+  },
+  {
+   "access": "write",
+   "api": "jsm",
+   "deprecated": false,
+   "has_body": true,
+   "id": "api.jsm.addRequestParticipants",
+   "method": "POST",
+   "operationId": "addRequestParticipants",
+   "params": [
+    [
+     "issueIdOrKey",
+     "path",
+     true
+    ]
+   ],
+   "path": "/request/{issueIdOrKey}/participant",
+   "summary": "Add participants",
+   "tags": [
+    "Request"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "jsm",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.jsm.getApprovals",
+   "method": "GET",
+   "operationId": "getApprovals",
+   "params": [
+    [
+     "issueIdOrKey",
+     "path",
+     true
+    ]
+   ],
+   "path": "/request/{issueIdOrKey}/approval",
+   "summary": "Get approvals",
+   "tags": [
+    "Approval"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "jsm",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.jsm.getIssuesInQueue",
+   "method": "GET",
+   "operationId": "getIssuesInQueue",
+   "params": [
+    [
+     "serviceDeskId",
+     "path",
+     true
+    ],
+    [
+     "queueId",
+     "path",
+     true
+    ]
+   ],
+   "path": "/servicedesk/{serviceDeskId}/queue/{queueId}/issue",
+   "summary": "Get issues in queue",
+   "tags": [
+    "Queues"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "jsm",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.jsm.getQueues",
+   "method": "GET",
+   "operationId": "getQueues",
+   "params": [
+    [
+     "serviceDeskId",
+     "path",
+     true
+    ]
+   ],
+   "path": "/servicedesk/{serviceDeskId}/queue",
+   "summary": "Get queues",
+   "tags": [
+    "Queues"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "jsm",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.jsm.getRequestParticipants",
+   "method": "GET",
+   "operationId": "getRequestParticipants",
+   "params": [
+    [
+     "issueIdOrKey",
+     "path",
+     true
+    ]
+   ],
+   "path": "/request/{issueIdOrKey}/participant",
+   "summary": "Get participants",
+   "tags": [
+    "Request"
+   ]
+  },
+  {
+   "access": "read",
+   "api": "jsm",
+   "deprecated": false,
+   "has_body": false,
+   "id": "api.jsm.getServiceDeskById",
+   "method": "GET",
+   "operationId": "getServiceDeskById",
+   "params": [
+    [
+     "serviceDeskId",
+     "path",
+     true
+    ]
+   ],
+   "path": "/servicedesk/{serviceDeskId}",
+   "summary": "Get service desk",
+   "tags": [
+    "Servicedesk"
+   ]
+  }
+ ]
+}

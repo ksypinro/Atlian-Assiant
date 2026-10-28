@@ -1,0 +1,15 @@
+Fetches a Jira project.
+
+Usage:
+  acli jira project view [flags]
+
+Examples:
+# Fetches a project details with given key
+$ acli jira project view --key "TEAM"
+$ acli jira project view --key "TEAM" --json
+
+
+Flags:
+  -h, --help         Show help for command
+  -j, --json         Output in JSON format
+      --key string   Key of the project to be fetched

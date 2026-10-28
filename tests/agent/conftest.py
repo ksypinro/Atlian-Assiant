@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import pytest
 
-from atlassian_client import AtlassianConfig, BackendKind, ClientFactory
-from atlassian_client.policy import AccessPolicy
-from atlassian_client.testing import FakeBackend
+from atlian_assiant import AtlassianConfig, BackendKind, ClientFactory
+from atlian_assiant.policy import AccessPolicy
+from atlian_assiant.testing import FakeBackend
 
 
 def build(policy: AccessPolicy | None = None, **kw: object):

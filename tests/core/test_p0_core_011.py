@@ -1,8 +1,8 @@
 import anyio
 import pytest
 
-from atlassian_client.core.ratelimit import ConcurrencyLimiter, IssueWriteSerializer, RateLimitObserver
-from atlassian_client.core.retry import RetryPolicy
+from atlian_assiant.core.ratelimit import ConcurrencyLimiter, IssueWriteSerializer, RateLimitObserver
+from atlian_assiant.core.retry import RetryPolicy
 
 
 def test_retry_policy_rules():

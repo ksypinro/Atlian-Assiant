@@ -7,7 +7,7 @@ import os
 
 import pytest
 
-from atlassian_client import AsyncAtlassianClient
+from atlian_assiant import AsyncAtlassianClient
 
 pytestmark = [
     pytest.mark.layer_17, pytest.mark.anyio,

@@ -1,0 +1,14 @@
+List all the links of a workitem.
+
+Usage:
+  acli jira workitem link list [flags]
+
+Examples:
+# List work item links
+$ acli jira workitem link list --key TEST-123
+
+
+Flags:
+  -h, --help         Show help for command
+      --json         Output in JSON format
+      --key string   Workitem key to list the links for

@@ -1,0 +1,17 @@
+View details of a Jira sprint.
+
+Usage:
+  acli jira sprint view [flags]
+
+Examples:
+# View sprint details by ID
+$ acli jira sprint view --id 123
+
+# View sprint in JSON format
+$ acli jira sprint view --id 123 --json
+
+
+Flags:
+  -h, --help        Show help for command
+      --id string   ID of the sprint to view (required)
+      --json        Output in JSON format

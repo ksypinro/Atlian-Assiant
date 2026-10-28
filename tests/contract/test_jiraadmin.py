@@ -1,6 +1,6 @@
 import pytest
 
-from atlassian_client.protocols import JiraAdmin, JiraProjectReader
+from atlian_assiant.protocols import JiraAdmin, JiraProjectReader
 
 pytestmark = [pytest.mark.layer_01, pytest.mark.anyio]
 

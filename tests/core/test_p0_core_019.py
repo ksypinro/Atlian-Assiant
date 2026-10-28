@@ -1,9 +1,7 @@
 import logging
 
-import pytest
-
-from atlassian_client.core.redaction import MASK, Redactor, RedactingFilter
-from atlassian_client.core.telemetry import Telemetry
+from atlian_assiant.core.redaction import MASK, RedactingFilter, Redactor
+from atlian_assiant.core.telemetry import Telemetry
 
 
 def test_text_redaction_of_configured_secrets_and_patterns():

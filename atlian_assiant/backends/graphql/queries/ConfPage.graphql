@@ -1,0 +1,14 @@
+# op: confluence.content.get
+# requires: Query.confluence, ConfluenceQueryApi.page, ConfluencePage.body, ConfluencePage.latestVersion
+query ConfPage($id: ID!) {
+  confluence {
+    page(id: $id) {
+      pageId title status createdAt
+      space { spaceId }
+      author { user { accountId } }
+      latestVersion { number createdAt }
+      links { base webUi }
+      body { storage { value } }
+    }
+  }
+}

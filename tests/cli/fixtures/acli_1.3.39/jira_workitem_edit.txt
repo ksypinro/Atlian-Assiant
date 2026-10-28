@@ -1,0 +1,39 @@
+Edit a Jira work item or multiple work items.
+
+Usage:
+  acli jira workitem edit [flags]
+
+Examples:
+# Edit work item with work item keys
+$ acli jira workitem edit --key "KEY-1,KEY-2" --summary "New Summary"
+
+# Edit work item with JQL query
+$ acli jira workitem edit --jql "project = TEAM" --assignee "user@atlassian.com"
+
+# Edit work item with Filter ID
+$ acli jira workitem edit --filter 10001 --description "Updated description" --yes
+
+# Generate a JSON file that could be used for workitem edit via --from-json flag
+$ acli jira workitem edit --generate-json
+
+# Edit work item from a JSON file
+$ acli jira workitem edit --from-json "workitem.json"
+
+Flags:
+  -a, --assignee string           Assign work item with email or account ID. Use '@me' to self-assign, 'default' to assign to the project's default assignee
+  -d, --description string        Edit the description in plain text or Atlassian Document Format (ADF)
+      --description-file string   Read the description in plain text or Atlassian Document Format (ADF) from the file
+      --filter string             Filter ID of work items to be edited
+      --from-json string          Read the work item definition from a JSON file
+      --generate-json             Generates a JSON file that could be used for work item editing
+  -h, --help                      Show help for command
+      --ignore-errors             Ignore the errors and continue
+      --jql string                JQL query for work items to be edited
+      --json                      Generate a JSON output
+  -k, --key string                A list of work item keys to be edited
+  -l, --labels string             Edit the labels
+      --remove-assignee           Remove the assignee
+      --remove-labels string      Remove the labels
+  -s, --summary string            Edit the summary
+  -t, --type string               Edit the work item type
+  -y, --yes                       Confirm edit without prompting

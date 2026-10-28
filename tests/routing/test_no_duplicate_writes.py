@@ -1,14 +1,21 @@
 """A write must never be sent twice: fallback is allowed only when NOTHING was sent (design section 12.4)."""
 import pytest
 
-from atlassian_client import AtlassianConfig, BackendKind, ClientFactory, operations as ops
-from atlassian_client.capabilities import BackendKind as B
-from atlassian_client.core.errors import (AtlassianError, BackendUnavailableError, NoBackendAvailableError, ServerError, UnsupportedOperationError)
-from atlassian_client.models.jira import IssueDraft
-from atlassian_client.policy import AccessPolicy, AutoApprove
-from atlassian_client.protocols import JiraIssueWriter
-from atlassian_client.routing import Router, SelectionPolicy
-from atlassian_client.testing import FakeBackend
+from atlian_assiant import AtlassianConfig, ClientFactory
+from atlian_assiant import operations as ops
+from atlian_assiant.capabilities import BackendKind as B
+from atlian_assiant.core.errors import (
+    AtlassianError,
+    BackendUnavailableError,
+    NoBackendAvailableError,
+    ServerError,
+    UnsupportedOperationError,
+)
+from atlian_assiant.models.jira import IssueDraft
+from atlian_assiant.policy import AccessPolicy, AutoApprove
+from atlian_assiant.protocols import JiraIssueWriter
+from atlian_assiant.routing import Router, SelectionPolicy
+from atlian_assiant.testing import FakeBackend
 
 pytestmark = [pytest.mark.anyio, pytest.mark.layer_09]
 
@@ -87,8 +94,8 @@ async def test_end_to_end_through_the_facade_one_failed_write_one_issue():
     client = ClientFactory().build_async(AtlassianConfig(site="x"), backends=[], preset="agent", policy=AccessPolicy.read_write(), confirm=AutoApprove.__new__(AutoApprove),
                                          extra_backends={B.MCP: mcp, B.REST: rest}) if False else None
     assert client is None
+    from atlian_assiant.policy import CallbackConfirmation
     from tests.agent.conftest import build
-    from atlassian_client.policy import CallbackConfirmation
 
     c = build(AccessPolicy.read_write(), confirm=CallbackConfirmation(lambda p: True))
     c.router._backends[B.MCP] = mcp

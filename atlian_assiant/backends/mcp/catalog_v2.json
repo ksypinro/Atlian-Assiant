@@ -1,0 +1,1278 @@
+{
+ "_source": "Atlassian Rovo MCP server https://mcp.atlassian.com/v2/mcp, recorded 2026-10-08 from tools/list + discover (live, API-token auth)",
+ "direct": {
+  "getAccessibleAtlassianResources": [],
+  "atlassianUserInfo": [],
+  "getConfluenceContent": [
+   "cloudId",
+   "content_format",
+   "content_id",
+   "content_url",
+   "detail",
+   "draft"
+  ],
+  "createConfluenceContent": [
+   "body",
+   "cloudId",
+   "contentType",
+   "contentWidth",
+   "draft",
+   "parent",
+   "private",
+   "title"
+  ],
+  "updateConfluenceContent": [
+   "body",
+   "cloudId",
+   "contentId",
+   "contentUrl",
+   "contentWidth",
+   "draft",
+   "dryRun",
+   "edits",
+   "minorEdit",
+   "ownerId",
+   "snapshotToken",
+   "title",
+   "versionMessage"
+  ],
+  "searchConfluence": [
+   "cloudId",
+   "cql",
+   "cqlcontext",
+   "cursor",
+   "expand",
+   "limit"
+  ],
+  "getJiraIssue": [
+   "actionSource",
+   "cloudId",
+   "expand",
+   "failFast",
+   "fields",
+   "fieldsByKeys",
+   "includeEditableFields",
+   "issueIdOrKey",
+   "properties",
+   "responseContentFormat",
+   "view"
+  ],
+  "searchJiraIssuesUsingJql": [
+   "actionSource",
+   "cloudId",
+   "fields",
+   "jql",
+   "maxResults",
+   "nextPageToken",
+   "responseContentFormat",
+   "searchResultMode",
+   "view"
+  ],
+  "createJiraIssue": [
+   "additional_fields",
+   "assignToSprint",
+   "assignee",
+   "cloudId",
+   "contentFormat",
+   "description",
+   "issueType",
+   "labels",
+   "parent",
+   "priority",
+   "projectKey",
+   "summary"
+  ],
+  "editJiraIssue": [
+   "actionSource",
+   "additional_fields",
+   "cloudId",
+   "contentFormat",
+   "fields",
+   "inlineFileCollection",
+   "inlineFileId",
+   "inlineFileName",
+   "issueIdOrKey",
+   "rankAfterIssue",
+   "rankBeforeIssue",
+   "rankCustomFieldId",
+   "responseContentFormat"
+  ],
+  "transitionJiraIssue": [
+   "actionSource",
+   "assignToBacklog",
+   "boardId",
+   "cloudId",
+   "fields",
+   "historyMetadata",
+   "issueIdOrKey",
+   "sprintId",
+   "transitionId",
+   "transitionName",
+   "update"
+  ],
+  "addOrEditJiraIssueComment": [
+   "cloudId",
+   "commentBody",
+   "commentId",
+   "commentVisibility",
+   "contentFormat",
+   "inlineFileCollection",
+   "inlineFileId",
+   "inlineFileName",
+   "issueIdOrKey",
+   "jsmCommentType",
+   "responseContentFormat"
+  ],
+  "getLoomVideo": [
+   "cloudId",
+   "commentsAfter",
+   "commentsFirst",
+   "expand",
+   "linksAfter",
+   "linksFirst",
+   "transcriptFormat",
+   "videoAri",
+   "videoUrl"
+  ],
+  "getGraphContext": [
+   "after",
+   "cloudId",
+   "detailLevel",
+   "first",
+   "objectIdentifier",
+   "objectType",
+   "relationshipTypes",
+   "targetObjectTypes",
+   "timeRange"
+  ],
+  "getGraphObject": [
+   "cloudId",
+   "objects"
+  ],
+  "addGraphContext": [
+   "cloudId",
+   "objectIdentifier",
+   "relationshipType",
+   "targetObjectIdentifier",
+   "title"
+  ],
+  "discover": [
+   "query"
+  ],
+  "executeRead": [
+   "cloudId",
+   "inputs",
+   "name",
+   "responseFields",
+   "view"
+  ],
+  "executeWrite": [
+   "cloudId",
+   "inputs",
+   "name",
+   "responseFields",
+   "view"
+  ],
+  "executeDestructive": [
+   "cloudId",
+   "inputs",
+   "name",
+   "responseFields",
+   "view"
+  ],
+  "search": [
+   "cloudId",
+   "limit",
+   "mode",
+   "query",
+   "targetApp"
+  ]
+ },
+ "execute": {
+  "addConfluenceContentPermissions": {
+   "tool": "executeWrite",
+   "inputs": [
+    "cloudId",
+    "contentId",
+    "permissions"
+   ]
+  },
+  "addConfluenceReaction": {
+   "tool": "executeWrite",
+   "inputs": [
+    "cloudId",
+    "contentId",
+    "emojiId"
+   ]
+  },
+  "addLabelsToConfluenceContent": {
+   "tool": "executeWrite",
+   "inputs": [
+    "cloudId",
+    "contentId",
+    "labels"
+   ]
+  },
+  "addOrEditJiraIssueWorklog": {
+   "tool": "executeWrite",
+   "inputs": [
+    "cloudId",
+    "comment",
+    "contentFormat",
+    "issueIdOrKey",
+    "started",
+    "timeSpent",
+    "visibility",
+    "worklogId"
+   ]
+  },
+  "archiveConfluenceContent": {
+   "tool": "executeWrite",
+   "inputs": [
+    "cloudId",
+    "contentId"
+   ]
+  },
+  "completeConfluenceTask": {
+   "tool": "executeWrite",
+   "inputs": [
+    "cloudId",
+    "taskId"
+   ]
+  },
+  "convertJiraIssueHierarchy": {
+   "tool": "executeWrite",
+   "inputs": [
+    "acknowledgeChildReparent",
+    "acknowledgeMove",
+    "cloudId",
+    "confirm",
+    "fieldRemap",
+    "issueIdOrKey",
+    "mode",
+    "parentIssueKey",
+    "targetIssueType",
+    "targetProjectKey"
+   ]
+  },
+  "copyConfluenceContent": {
+   "tool": "executeWrite",
+   "inputs": [
+    "cloudId",
+    "contentId",
+    "destinationSpaceKey",
+    "parentContentId",
+    "title"
+   ]
+  },
+  "createConfluenceAttachment": {
+   "tool": "executeWrite",
+   "inputs": [
+    "cloudId",
+    "comment",
+    "contentId",
+    "fileSize",
+    "localFilePath"
+   ]
+  },
+  "createConfluenceComment": {
+   "tool": "executeWrite",
+   "inputs": [
+    "body",
+    "cloudId",
+    "commentType",
+    "contentId",
+    "inlineSelection",
+    "parentCommentId"
+   ]
+  },
+  "createConfluenceSpace": {
+   "tool": "executeWrite",
+   "inputs": [
+    "alias",
+    "cloudId",
+    "copySpaceAccessConfiguration",
+    "createPrivateSpace",
+    "description",
+    "key",
+    "name",
+    "roleAssignments",
+    "templateKey"
+   ]
+  },
+  "createJiraBoard": {
+   "tool": "executeWrite",
+   "inputs": [
+    "cloudId",
+    "filterId",
+    "location",
+    "name",
+    "type"
+   ]
+  },
+  "createJiraIssueLink": {
+   "tool": "executeWrite",
+   "inputs": [
+    "cloudId",
+    "comment",
+    "inwardIssue",
+    "linkType",
+    "outwardIssue"
+   ]
+  },
+  "createJiraIssueRemoteIssueLink": {
+   "tool": "executeWrite",
+   "inputs": [
+    "cloudId",
+    "issueIdOrKey",
+    "relationship",
+    "summary",
+    "title",
+    "url"
+   ]
+  },
+  "createLoomVideoComment": {
+   "tool": "executeWrite",
+   "inputs": [
+    "cloudId",
+    "content",
+    "timestamp",
+    "videoAri",
+    "videoUrl"
+   ]
+  },
+  "createLoomVideoReaction": {
+   "tool": "executeWrite",
+   "inputs": [
+    "category",
+    "cloudId",
+    "reactionName",
+    "reactionType",
+    "timestamp",
+    "videoAri",
+    "videoUrl"
+   ]
+  },
+  "createProjectUpdate": {
+   "tool": "executeWrite",
+   "inputs": [
+    "highlights",
+    "isDraft",
+    "notes",
+    "phaseStatus",
+    "projectId",
+    "summary",
+    "targetDate"
+   ]
+  },
+  "diffConfluenceContentVersions": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "contentId",
+    "content_format",
+    "from_version",
+    "to_version"
+   ]
+  },
+  "disableConfluencePublicLink": {
+   "tool": "executeDestructive",
+   "inputs": [
+    "cloudId",
+    "contentId"
+   ]
+  },
+  "downloadConfluenceAttachment": {
+   "tool": "executeRead",
+   "inputs": [
+    "attachmentId",
+    "cloudId",
+    "outputPath",
+    "version"
+   ]
+  },
+  "downloadJiraIssueAttachment": {
+   "tool": "executeRead",
+   "inputs": [
+    "attachmentId",
+    "cloudId",
+    "outputPath"
+   ]
+  },
+  "editJiraEntityProperty": {
+   "tool": "executeWrite",
+   "inputs": [
+    "accountId",
+    "cloudId",
+    "commentId",
+    "dashboardId",
+    "entityType",
+    "issueIdOrKey",
+    "itemId",
+    "propertyKey",
+    "value",
+    "worklogId"
+   ]
+  },
+  "enableConfluencePublicLink": {
+   "tool": "executeWrite",
+   "inputs": [
+    "cloudId",
+    "contentId"
+   ]
+  },
+  "exportConfluenceContent": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "contentId",
+    "format"
+   ]
+  },
+  "getBitbucketRepoPullRequestDiff": {
+   "tool": "executeRead",
+   "inputs": [
+    "prId",
+    "repoId",
+    "workspaceId"
+   ]
+  },
+  "getBitbucketRepository": {
+   "tool": "executeRead",
+   "inputs": [
+    "repoId",
+    "workspaceId"
+   ]
+  },
+  "getConfluenceApproval": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "contentId",
+    "contentStatus",
+    "cursor",
+    "expand",
+    "limit"
+   ]
+  },
+  "getConfluenceAttachment": {
+   "tool": "executeRead",
+   "inputs": [
+    "attachmentId",
+    "cloudId",
+    "version"
+   ]
+  },
+  "getConfluenceComment": {
+   "tool": "executeRead",
+   "inputs": [
+    "body-format",
+    "cloudId",
+    "comment-type",
+    "commentId",
+    "include-replies"
+   ]
+  },
+  "getConfluenceContentAnalytics": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "content_id",
+    "cursor",
+    "fromDate",
+    "limit",
+    "toDate"
+   ]
+  },
+  "getConfluenceContentAncestors": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "contentId",
+    "limit"
+   ]
+  },
+  "getConfluenceContentDescendants": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "contentId",
+    "cursor",
+    "depth",
+    "limit"
+   ]
+  },
+  "getConfluenceContentPermissions": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "contentId",
+    "cursor",
+    "limit",
+    "operation",
+    "principal-id",
+    "principal-type"
+   ]
+  },
+  "getConfluenceContentRestrictionState": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "contentId"
+   ]
+  },
+  "getConfluenceContentStatus": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "contentId",
+    "status"
+   ]
+  },
+  "getConfluenceContentVersion": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "contentId",
+    "content_format",
+    "versionNumber"
+   ]
+  },
+  "getConfluencePersonalSpace": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId"
+   ]
+  },
+  "getConfluencePublicLinkStatus": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "contentId"
+   ]
+  },
+  "getConfluenceReactions": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "contentId"
+   ]
+  },
+  "getConfluenceSpace": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "includeLabels",
+    "spaceIdOrKey"
+   ]
+  },
+  "getConfluenceSpaceInstructions": {
+   "tool": "executeRead",
+   "inputs": [
+    "body_format",
+    "cloudId",
+    "spaceId",
+    "spaceKey"
+   ]
+  },
+  "getConfluenceTask": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "taskId"
+   ]
+  },
+  "getConfluenceTemplate": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "templateId"
+   ]
+  },
+  "getContentFormatGuide": {
+   "tool": "executeRead",
+   "inputs": [
+    "reference",
+    "toolName"
+   ]
+  },
+  "getJiraBoardConfig": {
+   "tool": "executeRead",
+   "inputs": [
+    "boardId",
+    "cloudId"
+   ]
+  },
+  "getJiraBoardIssueData": {
+   "tool": "executeRead",
+   "inputs": [
+    "boardId",
+    "cloudId",
+    "dataset",
+    "fields",
+    "jql",
+    "maxResults",
+    "nextPageToken",
+    "responseContentFormat",
+    "searchResultMode"
+   ]
+  },
+  "getJiraBoardSprintData": {
+   "tool": "executeRead",
+   "inputs": [
+    "boardId",
+    "boardName",
+    "boardType",
+    "cloudId",
+    "includeIssues",
+    "projectKeyOrId",
+    "sprintId",
+    "sprintName"
+   ]
+  },
+  "getJiraCurrentUser": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "expand"
+   ]
+  },
+  "getJiraEntityProperty": {
+   "tool": "executeRead",
+   "inputs": [
+    "accountId",
+    "cloudId",
+    "commentId",
+    "dashboardId",
+    "entityType",
+    "issueIdOrKey",
+    "itemId",
+    "propertyKey",
+    "worklogId"
+   ]
+  },
+  "getJiraIssueTypeMetaWithFields": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "issueTypeId",
+    "maxResults",
+    "projectIdOrKey",
+    "requiredFieldsOnly",
+    "startAt"
+   ]
+  },
+  "getJiraProjectVersionRelatedWork": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "versionId"
+   ]
+  },
+  "getJiraProjectVersions": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "include",
+    "maxResults",
+    "orderBy",
+    "projectIdOrKey",
+    "query",
+    "startAt",
+    "status",
+    "versionId"
+   ]
+  },
+  "getJiraUser": {
+   "tool": "executeRead",
+   "inputs": [
+    "accountId",
+    "cloudId",
+    "expand"
+   ]
+  },
+  "getMyWork": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "cursor",
+    "limit",
+    "product",
+    "sinceDays",
+    "type"
+   ]
+  },
+  "getProjectUpdate": {
+   "tool": "executeRead",
+   "inputs": [
+    "cursors",
+    "include",
+    "limits",
+    "updateId"
+   ]
+  },
+  "getTalentUser": {
+   "tool": "executeRead",
+   "inputs": []
+  },
+  "listConfluenceAttachments": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "contentId",
+    "cursor",
+    "filename",
+    "limit",
+    "mediaType",
+    "sort",
+    "status"
+   ]
+  },
+  "listConfluenceComments": {
+   "tool": "executeRead",
+   "inputs": [
+    "body-format",
+    "cloudId",
+    "comment-type",
+    "content-id",
+    "content-type",
+    "cursor",
+    "include-replies",
+    "limit",
+    "resolution-status",
+    "sort",
+    "status"
+   ]
+  },
+  "listConfluenceContent": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "cursor",
+    "limit",
+    "spaceId",
+    "status",
+    "type"
+   ]
+  },
+  "listConfluenceContentVersions": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "contentId",
+    "cursor",
+    "limit"
+   ]
+  },
+  "listConfluenceSpaces": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "cursor",
+    "ids",
+    "keys",
+    "labels",
+    "limit",
+    "status",
+    "type"
+   ]
+  },
+  "listConfluenceTasks": {
+   "tool": "executeRead",
+   "inputs": [
+    "assigned-to",
+    "blogpost-id",
+    "cloudId",
+    "completed-by",
+    "created-by",
+    "cursor",
+    "limit",
+    "page-id",
+    "spaceId",
+    "status"
+   ]
+  },
+  "listConfluenceTemplates": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "cursor",
+    "limit",
+    "query",
+    "scope",
+    "space_id",
+    "template_type"
+   ]
+  },
+  "listJiraBoardSprints": {
+   "tool": "executeRead",
+   "inputs": [
+    "boardId",
+    "cloudId",
+    "maxResults",
+    "startAt",
+    "state"
+   ]
+  },
+  "listJiraBoards": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "expand",
+    "filterId",
+    "includePrivate",
+    "maxResults",
+    "name",
+    "negateLocationFiltering",
+    "orderBy",
+    "projectKeyOrId",
+    "projectTypeLocation",
+    "startAt",
+    "type"
+   ]
+  },
+  "listJiraDashboards": {
+   "tool": "executeRead",
+   "inputs": [
+    "accountId",
+    "cloudId",
+    "dashboardName",
+    "groupId",
+    "groupname",
+    "maxResults",
+    "orderBy",
+    "projectId",
+    "startAt",
+    "status"
+   ]
+  },
+  "listJiraFilters": {
+   "tool": "executeRead",
+   "inputs": [
+    "accountId",
+    "cloudId",
+    "expand",
+    "filterName",
+    "id",
+    "maxResults",
+    "orderBy",
+    "projectId",
+    "startAt"
+   ]
+  },
+  "listJiraIssueAssignableUsers": {
+   "tool": "executeRead",
+   "inputs": [
+    "actionSource",
+    "issueKey",
+    "project",
+    "query"
+   ]
+  },
+  "listJiraIssueChangelogs": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "issueIdOrKey",
+    "maxResults",
+    "startAt"
+   ]
+  },
+  "listJiraIssueComments": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "expand",
+    "issueIdOrKey",
+    "maxResults",
+    "orderBy",
+    "reactionDetail",
+    "responseContentFormat",
+    "startAt"
+   ]
+  },
+  "listJiraIssueLinkTypes": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId"
+   ]
+  },
+  "listJiraIssueRemoteIssueLinks": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "globalId",
+    "issueIdOrKey"
+   ]
+  },
+  "listJiraIssueTransitions": {
+   "tool": "executeRead",
+   "inputs": [
+    "actionSource",
+    "cloudId",
+    "expand",
+    "includeUnavailableTransitions",
+    "issueIdOrKey",
+    "skipRemoteOnlyCondition",
+    "sortByOpsBarAndStatus",
+    "transitionId"
+   ]
+  },
+  "listJiraIssueWorklogs": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "expand",
+    "issueIdOrKey",
+    "maxResults",
+    "responseContentFormat",
+    "startAt",
+    "startedAfter",
+    "startedBefore"
+   ]
+  },
+  "listJiraProjectComponents": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "componentSource",
+    "maxResults",
+    "orderBy",
+    "projectIdOrKey",
+    "query",
+    "startAt"
+   ]
+  },
+  "listJiraProjectIssueTypesMetadata": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "maxResults",
+    "projectIdOrKey",
+    "startAt"
+   ]
+  },
+  "listJiraProjects": {
+   "tool": "executeRead",
+   "inputs": [
+    "action",
+    "cloudId",
+    "expand",
+    "maxResults",
+    "query",
+    "startAt"
+   ]
+  },
+  "listJiraStatuses": {
+   "tool": "executeRead",
+   "inputs": [
+    "cloudId",
+    "issueType",
+    "mode",
+    "nameContains",
+    "projectKey",
+    "statusCategory",
+    "statusIdOrName"
+   ]
+  },
+  "lookupJiraAccountId": {
+   "tool": "executeRead",
+   "inputs": [
+    "actionSource",
+    "cloudId",
+    "maxResults",
+    "query"
+   ]
+  },
+  "manageJiraProjectVersion": {
+   "tool": "executeDestructive",
+   "inputs": [
+    "action",
+    "archived",
+    "cloudId",
+    "description",
+    "driver",
+    "moveUnfixedIssuesTo",
+    "name",
+    "projectIdOrKey",
+    "releaseDate",
+    "released",
+    "startDate",
+    "versionId"
+   ]
+  },
+  "manageJiraProjectVersionRelatedWork": {
+   "tool": "executeWrite",
+   "inputs": [
+    "action",
+    "category",
+    "cloudId",
+    "relatedWorkId",
+    "title",
+    "url",
+    "versionId"
+   ]
+  },
+  "manageJiraSprint": {
+   "tool": "executeDestructive",
+   "inputs": [
+    "action",
+    "boardId",
+    "cloudId",
+    "endDate",
+    "goal",
+    "issueIdsOrKeys",
+    "name",
+    "sprintId",
+    "startDate",
+    "storyPoints"
+   ]
+  },
+  "moveConfluenceContent": {
+   "tool": "executeWrite",
+   "inputs": [
+    "cloudId",
+    "id",
+    "position",
+    "targetId"
+   ]
+  },
+  "moveLoomVideoToFolder": {
+   "tool": "executeWrite",
+   "inputs": [
+    "cloudId",
+    "folderId",
+    "videoAri",
+    "videoUrl"
+   ]
+  },
+  "removeConfluenceContentPermissions": {
+   "tool": "executeDestructive",
+   "inputs": [
+    "cloudId",
+    "contentId",
+    "operation",
+    "principal-id",
+    "principal-type"
+   ]
+  },
+  "reopenBitbucketRepoPullRequestComment": {
+   "tool": "executeWrite",
+   "inputs": [
+    "commentId",
+    "prId",
+    "repoId",
+    "workspaceId"
+   ]
+  },
+  "reopenConfluenceTask": {
+   "tool": "executeDestructive",
+   "inputs": [
+    "cloudId",
+    "taskId"
+   ]
+  },
+  "replaceConfluenceContentPermissions": {
+   "tool": "executeDestructive",
+   "inputs": [
+    "cloudId",
+    "contentId",
+    "permissions"
+   ]
+  },
+  "resolveConfluenceContentMacros": {
+   "tool": "executeRead",
+   "inputs": [
+    "all",
+    "cloudId",
+    "contentId",
+    "macroIds"
+   ]
+  },
+  "restoreConfluenceContentVersion": {
+   "tool": "executeWrite",
+   "inputs": [
+    "cloudId",
+    "contentId",
+    "message",
+    "restoreTitle",
+    "versionNumber"
+   ]
+  },
+  "setBitbucketRepoPullRequestTaskState": {
+   "tool": "executeWrite",
+   "inputs": [
+    "prId",
+    "repoId",
+    "taskId",
+    "taskState",
+    "workspaceId"
+   ]
+  },
+  "setConfluenceContentRestrictionState": {
+   "tool": "executeDestructive",
+   "inputs": [
+    "cloudId",
+    "contentId",
+    "state"
+   ]
+  },
+  "setConfluenceContentStatus": {
+   "tool": "executeWrite",
+   "inputs": [
+    "cloudId",
+    "color",
+    "contentId",
+    "id",
+    "name",
+    "status"
+   ]
+  },
+  "setConfluenceSpaceInstructions": {
+   "tool": "executeWrite",
+   "inputs": [
+    "body",
+    "body_format",
+    "cloudId",
+    "spaceId",
+    "spaceKey"
+   ]
+  },
+  "starConfluenceContent": {
+   "tool": "executeWrite",
+   "inputs": [
+    "cloudId",
+    "contentId"
+   ]
+  },
+  "starConfluenceSpace": {
+   "tool": "executeWrite",
+   "inputs": [
+    "cloudId",
+    "spaceId",
+    "spaceKey"
+   ]
+  },
+  "unarchiveConfluenceContent": {
+   "tool": "executeWrite",
+   "inputs": [
+    "cloudId",
+    "contentId"
+   ]
+  },
+  "unstarConfluenceContent": {
+   "tool": "executeDestructive",
+   "inputs": [
+    "cloudId",
+    "contentId"
+   ]
+  },
+  "unstarConfluenceSpace": {
+   "tool": "executeDestructive",
+   "inputs": [
+    "cloudId",
+    "spaceId",
+    "spaceKey"
+   ]
+  },
+  "unwatchConfluenceContent": {
+   "tool": "executeDestructive",
+   "inputs": [
+    "cloudId",
+    "contentId"
+   ]
+  },
+  "unwatchConfluenceLabel": {
+   "tool": "executeDestructive",
+   "inputs": [
+    "cloudId",
+    "labelName"
+   ]
+  },
+  "unwatchConfluenceSpace": {
+   "tool": "executeDestructive",
+   "inputs": [
+    "cloudId",
+    "spaceId",
+    "spaceKey"
+   ]
+  },
+  "updateBitbucketRepoPullRequestComment": {
+   "tool": "executeWrite",
+   "inputs": [
+    "commentId",
+    "content",
+    "prId",
+    "repoId",
+    "workspaceId"
+   ]
+  },
+  "updateConfluenceComment": {
+   "tool": "executeWrite",
+   "inputs": [
+    "body",
+    "cloudId",
+    "commentId",
+    "commentType",
+    "expectedVersion"
+   ]
+  },
+  "updateConfluenceCommentResolution": {
+   "tool": "executeWrite",
+   "inputs": [
+    "cloudId",
+    "commentId",
+    "commentType",
+    "resolved"
+   ]
+  },
+  "updateLoomVideoPermissions": {
+   "tool": "executeDestructive",
+   "inputs": [
+    "cloudId",
+    "videoAri",
+    "videoUrl",
+    "visibility"
+   ]
+  },
+  "uploadAttachmentToJiraIssue": {
+   "tool": "executeWrite",
+   "inputs": [
+    "cloudId",
+    "fileId",
+    "filePath",
+    "issueIdOrKey"
+   ]
+  },
+  "watchConfluenceContent": {
+   "tool": "executeWrite",
+   "inputs": [
+    "cloudId",
+    "contentId"
+   ]
+  },
+  "watchConfluenceLabel": {
+   "tool": "executeWrite",
+   "inputs": [
+    "cloudId",
+    "labelName"
+   ]
+  },
+  "watchConfluenceSpace": {
+   "tool": "executeWrite",
+   "inputs": [
+    "cloudId",
+    "spaceId",
+    "spaceKey"
+   ]
+  },
+  "watchJiraIssue": {
+   "tool": "executeWrite",
+   "inputs": [
+    "action",
+    "cloudId",
+    "issueIdOrKey"
+   ]
+  }
+ }
+}

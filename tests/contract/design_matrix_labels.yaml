@@ -1,0 +1,57 @@
+# Design section 11: column header -> BackendKind value, row label -> matrix.py ROW_OPS slug.
+matrix_columns:
+  REST: rest
+  DC: rest_dc
+  MCP: mcp
+  GQL: graphql
+  ACLI: acli
+  TWG: twg
+  jira-cli: jira_cli
+  Browser: browser
+  Lake: data_lake
+matrix_rows:
+  'Jira: get issue': jira-issue-get
+  'Jira: search JQL': jira-issue-search
+  'Jira: comments list': jira-comments-list
+  'Jira: changelog': jira-changelog
+  'Jira: worklogs': jira-worklogs
+  'Jira: transitions list': jira-transitions-list
+  'Jira: download attachment': jira-attachment-download
+  'Jira: create / edit issue': jira-issue-create-edit
+  'Jira: bulk create': jira-bulk-create
+  'Jira: transition': jira-transition
+  'Jira: add comment / worklog': jira-comment-worklog-add
+  'Jira: link / remote link': jira-links-write
+  'Jira: upload attachment': jira-attachment-upload
+  'Jira: delete issue/comment/attachment': jira-delete
+  'Jira: projects / components / versions': jira-projects
+  'Jira: fields / create-metadata': jira-fields-meta
+  'Jira: users / account lookup': jira-users
+  'Jira: filters / dashboards': jira-filters-dashboards
+  'Jira: JQL parse/sanitize/autocomplete': jira-jql-tools
+  'Jira: create project / workflows / screens': jira-admin
+  'Agile: boards / sprints / backlog / epics': agile-read
+  'Agile: manage sprint / rank / move': agile-write
+  'JSM: requests / SLA / KB / orgs': jsm-read
+  'JSM: create request / comment / approve': jsm-write
+  'Confluence: get content (all types)': conf-content-get
+  'Confluence: CQL search': conf-cql-search
+  'Confluence: children / ancestors / descendants': conf-tree
+  'Confluence: versions / diff': conf-versions-diff
+  'Confluence: comments / attachments / labels': conf-comments-attachments-labels
+  'Confluence: permissions / restrictions': conf-permissions
+  'Confluence: tasks / templates / reactions': conf-tasks-templates-reactions
+  'Confluence: create / update / move / copy / archive': conf-content-write
+  'Confluence: delete content': conf-content-delete
+  'Confluence: macro resolution': conf-macros
+  'Export: Jira CSV': export-jira-csv
+  'Export: Confluence page PDF/Word': export-conf-page
+  'Export: Confluence space': export-conf-space
+  Teamwork Graph context / objects: graph-context
+  Rovo semantic search: graph-semantic
+  Arbitrary GraphQL: graphql-exec
+  Warehouse tables / SQL: lake-tables
+  Webhook management: webhook-management
+  Org audit events / events-stream: org-audit
+  Automation incoming webhook: automation-trigger
+  Every remaining endpoint: long-tail

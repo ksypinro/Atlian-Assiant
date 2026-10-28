@@ -7,10 +7,10 @@ from typing import Any, TypeVar
 
 import pytest
 
-from atlassian_client import AtlassianConfig, BackendKind, ClientFactory
-from atlassian_client.protocols.base import implementation_of
-from atlassian_client.testing import FakeBackend
-from atlassian_client.testing.server import ScenarioServer
+from atlian_assiant import AtlassianConfig, BackendKind, ClientFactory
+from atlian_assiant.protocols.base import implementation_of
+from atlian_assiant.testing import FakeBackend
+from atlian_assiant.testing.server import ScenarioServer
 
 P = TypeVar("P")
 BACKENDS = ["fake", "rest"]

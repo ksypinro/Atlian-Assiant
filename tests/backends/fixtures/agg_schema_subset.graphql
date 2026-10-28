@@ -1,0 +1,392 @@
+# Recorded from the live Atlassian GraphQL gateway by `python -m tools.gql_schema_subset --fetch`. Only what the stored queries use.
+
+type AtlassianAccountUser implements User {
+  accountId: ID!
+  email: String
+  name: String!
+}
+
+type AuthenticationContext {
+  user: User
+}
+
+type ConfluenceBodies {
+  storage: ConfluenceBody
+}
+
+type ConfluenceBody {
+  value: String
+}
+
+interface ConfluenceComment {
+  author: ConfluenceUserInfo
+  body: ConfluenceBodies
+  commentId: ID
+  latestVersion: ConfluenceContentVersion
+  status: ConfluenceCommentStatus
+}
+
+enum ConfluenceCommentStatus { CURRENT DRAFT }
+
+enum ConfluenceCommentType { FOOTER INLINE }
+
+type ConfluenceContentVersion {
+  createdAt: DateTime
+  number: Int
+}
+
+type ConfluenceLabel {
+  id: ID
+  label: String
+  prefix: String
+}
+
+type ConfluencePage {
+  ancestors: [ConfluencePage]
+  author: ConfluenceUserInfo
+  body: ConfluenceBodies
+  comments(commentType: ConfluenceCommentType): [ConfluenceComment]
+  createdAt: String
+  labels: [ConfluenceLabel]
+  latestVersion: ConfluencePageVersion
+  links: ConfluencePageLinks
+  pageId: ID!
+  space: ConfluenceSpace
+  status: ConfluencePageStatus
+  title: String
+}
+
+type ConfluencePageLinks {
+  base: String
+  webUi: String
+}
+
+enum ConfluencePageStatus { ARCHIVED CURRENT DELETED DRAFT HISTORICAL TRASHED }
+
+type ConfluencePageVersion {
+  createdAt: DateTime
+  number: Int
+}
+
+type ConfluenceQueryApi {
+  page(id: ID!): ConfluencePage
+  space(id: ID!): ConfluenceSpace
+}
+
+type ConfluenceSearchConnection {
+  nodes: [ConfluenceSearchResponse]
+}
+
+type ConfluenceSearchResponse {
+  content: Content
+  entityType: String
+  excerpt: String
+  lastModified: String
+  score: Float
+  title: String
+  url: String
+}
+
+type ConfluenceSpace {
+  homepage: ConfluencePage
+  key: String
+  name: String
+  spaceId: ID!
+  status: ConfluenceSpaceStatus
+  type: ConfluenceSpaceType
+}
+
+enum ConfluenceSpaceStatus { ARCHIVED CURRENT TRASHED }
+
+enum ConfluenceSpaceType { GLOBAL PERSONAL }
+
+type ConfluenceUserInfo {
+  user: User
+}
+
+type Content {
+  id: ID
+  status: String
+  title: String
+  type: String
+}
+
+scalar Date
+
+scalar DateTime
+
+scalar JSON
+
+type JiraADF {
+  json: JSON
+}
+
+interface JiraComment {
+  author: User
+  commentId: ID!
+  created: DateTime!
+  richText: JiraRichText
+  updated: DateTime
+}
+
+type JiraCommentConnection {
+  edges: [JiraCommentEdge]
+}
+
+type JiraCommentEdge {
+  node: JiraComment
+}
+
+enum JiraCommentSortField { CREATED LATEST_ACTIVITY }
+
+input JiraCommentSortInput {
+  field: JiraCommentSortField
+  order: SortDirection
+}
+
+type JiraEstimate {
+  timeInSeconds: Long
+}
+
+type JiraIssue {
+  assignee: User
+  comments(first: Int, after: String, last: Int, before: String, targetId: String, beforeTarget: Int, afterTarget: Int, sortBy: JiraCommentSortInput, rootCommentsOnly: Boolean): JiraCommentConnection
+  created: DateTime
+  description: JiraRichText
+  dueDate: Date
+  id: ID!
+  issueId: String!
+  issueType: JiraIssueType
+  key: String!
+  labels(first: Int, after: String, last: Int, before: String): JiraLabelConnection
+  priority: JiraPriority
+  project: JiraProject
+  reporter: User
+  resolution: JiraResolution
+  resolutionDate: DateTime
+  status: JiraStatus
+  summary: String
+  updated: DateTime
+  webUrl: URL
+  worklogs(first: Int, after: String, last: Int, before: String, targetId: String, beforeTarget: Int, afterTarget: Int, sortBy: JiraWorklogSortInput): JiraWorkLogConnection
+}
+
+type JiraIssueConnection {
+  edges: [JiraIssueEdge]
+  pageInfo: PageInfo!
+  totalCount: Int
+}
+
+type JiraIssueEdge {
+  node: JiraIssue
+}
+
+input JiraIssueSearchChildIssuesInput {
+  parentIssueKey: String!
+  filterByProjectKeys: [String!]
+  jql: String
+  filterId: String
+  namespace: String
+  viewId: String
+  applyJqlFilter: Boolean
+}
+
+input JiraIssueSearchCustomInput {
+  jiraSoftwareInput: JiraSoftwareIssueSearchCustomInput
+  jiraTimelineInput: JiraTimelineIssueSearchCustomInput
+}
+
+input JiraIssueSearchFieldSetsInput {
+  fieldSetIds: [String!]
+  viewInput: JiraIssueSearchViewInput
+}
+
+input JiraIssueSearchGroupByInput {
+  jql: String
+  groupByJql: String
+}
+
+input JiraIssueSearchInput {
+  jql: String
+  filterId: String
+  customInput: JiraIssueSearchCustomInput
+  childIssuesInput: JiraIssueSearchChildIssuesInput
+  searchWithLastUsedJql: Boolean
+  groupByInput: JiraIssueSearchGroupByInput
+}
+
+input JiraIssueSearchOptions {
+  issueKey: String
+}
+
+input JiraIssueSearchViewFieldSetFilterContext {
+  filter: ID
+}
+
+input JiraIssueSearchViewFieldSetsContext {
+  projectContext: JiraIssueSearchViewFieldSetsProjectContext
+  issueContext: JiraIssueSearchViewFieldSetsIssueContext
+  filterContext: JiraIssueSearchViewFieldSetFilterContext
+}
+
+input JiraIssueSearchViewFieldSetsIssueContext {
+  issueKey: String
+}
+
+input JiraIssueSearchViewFieldSetsProjectContext {
+  project: ID
+  issueType: ID
+}
+
+input JiraIssueSearchViewInput {
+  namespace: String
+  viewId: String
+  filterId: String
+  context: JiraIssueSearchViewFieldSetsContext
+}
+
+type JiraIssueType {
+  issueTypeId: String
+  name: String!
+}
+
+type JiraLabel {
+  name: String
+}
+
+type JiraLabelConnection {
+  edges: [JiraLabelEdge]
+}
+
+type JiraLabelEdge {
+  node: JiraLabel
+}
+
+type JiraPriority {
+  name: String
+  priorityId: String!
+}
+
+type JiraProject {
+  key: String!
+  name: String!
+  projectId: String
+  projectType: JiraProjectType
+}
+
+type JiraProjectConnection {
+  edges: [JiraProjectEdge]
+}
+
+type JiraProjectEdge {
+  node: JiraProject
+}
+
+input JiraProjectFilterInput {
+  types: [JiraProjectType!]
+  projectCategoryId: ID
+  keyword: String
+  sortBy: JiraProjectSortInput
+  notificationConfigurationState: JiraProjectNotificationConfigurationState
+}
+
+enum JiraProjectNotificationConfigurationState { CONFIGURED DEFAULT }
+
+enum JiraProjectSortField { NAME KEY LEAD CATEGORY LAST_ISSUE_UPDATED_TIME FAVOURITE RECOMMENDATION }
+
+input JiraProjectSortInput {
+  sortBy: JiraProjectSortField
+  order: SortDirection
+}
+
+enum JiraProjectType { SERVICE_DESK BUSINESS SOFTWARE PRODUCT_DISCOVERY CUSTOMER_SERVICE }
+
+type JiraQuery {
+  allJiraProjects(cloudId: ID!, first: Int, last: Int, after: String, before: String, filter: JiraProjectFilterInput!): JiraProjectConnection
+  issueByKey(key: String!, cloudId: ID!): JiraIssue
+  issueSearchStable(cloudId: ID!, issueSearchInput: JiraIssueSearchInput!, options: JiraIssueSearchOptions, first: Int, after: String, last: Int, before: String, saveJQLToUserHistory: Boolean, fieldSetsInput: JiraIssueSearchFieldSetsInput): JiraIssueConnection
+  jiraProjectByKey(key: String!, cloudId: ID!, ignoreDeleteStatus: Boolean): JiraProject
+}
+
+type JiraResolution {
+  name: String
+}
+
+type JiraRichText {
+  adfValue: JiraADF
+}
+
+input JiraSoftwareIssueSearchCustomInput {
+  jiraEntityId: ID!
+  context: JiraSoftwareIssueSearchCustomInputContext
+  additionalJql: String
+}
+
+enum JiraSoftwareIssueSearchCustomInputContext { NONE BOARD BACKLOG }
+
+type JiraStatus {
+  name: String
+  statusCategory: JiraStatusCategory
+  statusId: String!
+}
+
+type JiraStatusCategory {
+  key: String
+  name: String
+  statusCategoryId: String!
+}
+
+input JiraTimelineIssueSearchCustomInput {
+  boardId: ID!
+  additionalJql: String
+  quickFilterIds: [ID!]
+  customFilterIds: [ID!]
+  useSavedFilters: Boolean
+  hideUnParentedItems: Boolean
+  maxHierarchyLevel: Int
+}
+
+type JiraWorkLogConnection {
+  edges: [JiraWorkLogEdge]
+}
+
+type JiraWorkLogEdge {
+  node: JiraWorklog
+}
+
+type JiraWorklog {
+  author: User
+  created: DateTime!
+  startDate: DateTime
+  timeSpent: JiraEstimate
+  updated: DateTime
+  workDescription: JiraRichText
+  worklogId: ID!
+}
+
+input JiraWorklogSortInput {
+  order: SortDirection!
+}
+
+scalar Long
+
+type PageInfo {
+  endCursor: String
+  hasNextPage: Boolean!
+}
+
+type Query {
+  confluence(cloudId: ID): ConfluenceQueryApi
+  confluence_search(after: String, before: String, cloudId: ID, cql: String!, cqlcontext: String, disableArchivedSpaceFallback: Boolean, excerpt: String, excludeCurrentSpaces: Boolean, first: Int, includeArchivedSpaces: Boolean, last: Int, offset: Int): ConfluenceSearchConnection
+  jira: JiraQuery
+  me: AuthenticationContext!
+}
+
+enum SortDirection { ASC DESC }
+
+scalar URL
+
+interface User {
+  accountId: ID!
+  name: String!
+}

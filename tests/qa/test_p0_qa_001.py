@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from atlassian_client.protocols import AnalyticsReader, JiraIssueReader
+from atlian_assiant.protocols import AnalyticsReader, JiraIssueReader
 from tests.contract.conftest import BACKENDS
 
 pytestmark = [pytest.mark.layer_01]

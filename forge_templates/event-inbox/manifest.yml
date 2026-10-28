@@ -1,0 +1,56 @@
+modules:
+  trigger:
+    - key: jira-events
+      function: on-event
+      events: [avi:jira:created:issue,
+              avi:jira:updated:issue,
+              avi:jira:deleted:issue,
+              avi:jira:created:comment,
+              avi:jira:updated:comment,
+              avi:jira:deleted:comment]
+      filter:
+        ignoreSelf: true
+        onError: RECEIVE_AND_LOG
+        appIsLicensed: false
+    - key: confluence-events
+      function: on-event
+      events: [avi:confluence:created:comment,
+              avi:confluence:updated:comment,
+              avi:confluence:deleted:comment,
+              avi:confluence:created:page,
+              avi:confluence:updated:page,
+              avi:confluence:deleted:page,
+              avi:confluence:moved:page,
+              avi:confluence:created:blogpost,
+              avi:confluence:updated:blogpost]
+      filter:
+        ignoreSelf: true
+        onError: RECEIVE_AND_LOG
+        appIsLicensed: false
+  consumer:
+    - key: inbox-writer
+      queue: product-events
+      function: write-inbox
+  scheduledTrigger:
+    - key: purge-inbox
+      function: purge-inbox
+      interval: hour
+  function:
+    - key: on-event
+      handler: src/events.onEvent
+    - key: write-inbox
+      handler: src/inbox.write
+      timeoutSeconds: 600
+    - key: purge-inbox
+      handler: src/inbox.purge
+    - key: app-rest
+      handler: src/rest.handle
+app:
+  runtime:
+    name: nodejs22.x
+  id: ari:cloud:ecosystem::app/REPLACE_WITH_forge_register_ID  # run `forge register` (event-inbox)
+permissions:
+  scopes:
+    - read:confluence-content.all
+    - read:jira-work
+    - storage:app

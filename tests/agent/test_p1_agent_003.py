@@ -3,11 +3,11 @@ from pathlib import Path
 
 import pytest
 
-from atlassian_client import AsyncAtlassianClient, AtlassianClient, BackendKind, ClientFactory, Preset
-from atlassian_client.capabilities import Access
-from atlassian_client.routing import SelectionPolicy
+from atlian_assiant import AsyncAtlassianClient, AtlassianClient, BackendKind, ClientFactory, Preset
+from atlian_assiant.capabilities import Access
+from atlian_assiant.routing import SelectionPolicy
 
-GUIDE = Path(__file__).parents[2] / "atlassian_client" / "agent" / "docs" / "AGENT_GUIDE.md"
+GUIDE = Path(__file__).parents[2] / "atlian_assiant" / "agent" / "docs" / "AGENT_GUIDE.md"
 LLMS = GUIDE.with_name("llms.txt")
 
 
@@ -21,7 +21,7 @@ def env(monkeypatch):
 def test_for_agent_is_read_only_agent_preset_with_mcp_first_routing(env):
     c = AsyncAtlassianClient.for_agent()
     assert c.preset is Preset.AGENT and c.policy.allowed == frozenset({Access.READ, Access.SEARCH}) and not c.policy.allow_credit_consuming
-    assert SelectionPolicy.from_preset(c.preset).order_for(__import__("atlassian_client").operations.JIRA_ISSUE_GET)[0] is BackendKind.MCP
+    assert SelectionPolicy.from_preset(c.preset).order_for(__import__("atlian_assiant").operations.JIRA_ISSUE_GET)[0] is BackendKind.MCP
     d = c.describe()
     assert d["preset"] == "agent" and d["access"] == ["read", "search"] and d["backends"]["rest"].startswith("ready")
     assert any("read-only" in n for n in d["notes"])
@@ -49,10 +49,10 @@ def test_agent_guide_has_the_outline_of_design_section_16_5():
 
 
 def test_every_tool_named_in_the_guide_exists():
-    from atlassian_client.agent.tools import CURATED
+    from atlian_assiant.agent.tools import CURATED
 
     known = {s.name for s in CURATED}
-    mentioned = set(re.findall(r"`((?:jira|jsm|confluence|atlassian)_[a-z_]+)`", GUIDE.read_text()))
+    mentioned = set(re.findall(r"`((?:jira|jsm|confluence|atlassian|events|analytics|audit)_[a-z_]+)`", GUIDE.read_text()))
     assert mentioned and mentioned <= known, mentioned - known
     assert known <= mentioned, known - mentioned                                      # the table lists every tool
 

@@ -1,0 +1,11 @@
+# op: jira.issue.comments.list
+# requires: JiraQuery.issueByKey, JiraIssue.comments, JiraComment.richText
+query JiraIssueComments($cloudId: ID!, $key: String!, $first: Int) {
+  jira {
+    issueByKey(key: $key, cloudId: $cloudId) {
+      comments(first: $first) {
+        edges { node { commentId created updated author { accountId name } richText { adfValue { json } } } }
+      }
+    }
+  }
+}

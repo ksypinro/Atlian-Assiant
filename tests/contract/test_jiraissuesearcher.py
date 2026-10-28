@@ -1,7 +1,7 @@
 import pytest
 
-from atlassian_client.core.errors import InvalidRequestError
-from atlassian_client.protocols import JiraIssueSearcher
+from atlian_assiant.core.errors import InvalidRequestError
+from atlian_assiant.protocols import JiraIssueSearcher
 
 from .helpers import drain
 

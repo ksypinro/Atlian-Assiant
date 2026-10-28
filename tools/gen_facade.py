@@ -1,4 +1,4 @@
-"""Generates atlassian_client/facade/_generated_*.py from the method specs below (design section 13).
+"""Generates atlian_assiant/facade/_generated_*.py from the method specs below (design section 13).
 
 Every generated method has the standard agent-facing docstring (summary, When to use, Args, Returns, Raises, Access,
 Example) and routes through ``Namespace._call``. Edit the SPECS here, then run ``python -m tools.gen_facade``.
@@ -12,9 +12,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from atlassian_client import operations as ops  # noqa: E402
+from atlian_assiant import operations as ops  # noqa: E402
 
-OUT = Path(__file__).resolve().parents[1] / "atlassian_client" / "facade"
+OUT = Path(__file__).resolve().parents[1] / "atlian_assiant" / "facade"
 
 COMMON = {
     "key": 'Issue key such as "PROJ-123" (case-insensitive) or the numeric issue id.',
@@ -376,6 +376,39 @@ cls("GraphClient", "Teamwork Graph context and Rovo semantic search (Cloud only;
       docs={"products": "Restrict to products, e.g. [\"confluence\"]."},
       raises="PolicyDeniedError: Rovo credit consumption is not enabled (allow_credit_consuming)."),
 ])
+cls("AnalyticsClient", "Data Lake / warehouse analytics (ANALYTICS access: opt-in; shares are NOT row-level permissioned).", "analytics", [
+    M("shares", "analytics.share.list", "AnalyticsReader", "list_shares", "", "list[str]", "List the Data Lake shares you can read.",
+      "Warehouse-style questions (history, trends, joins): first see which shares exist.", "shares = await client.analytics.shares()",
+      raises="PolicyDeniedError: ANALYTICS access is not enabled (it is in no default policy)."),
+    M("tables", "analytics.table.list", "AnalyticsReader", "list_tables", "share: str | None = None", "list[str]", "List Data Lake tables as share.schema.table names.",
+      "Before loading or querying: find the exact table names.", "tables = await client.analytics.tables()", docs={"share": "Only tables of this share."},
+      raises="PolicyDeniedError: ANALYTICS access is not enabled."),
+    M("load_table", "analytics.table.load", "AnalyticsReader", "load_table",
+      'table: str, *, columns: Sequence[str] | None = None, limit: int | None = None, as_: Literal["records", "pandas", "arrow"] = "records"', "Any",
+      "Load rows of one Data Lake table (records by default; pandas or Arrow when installed).", "You need raw warehouse rows of one table.",
+      'rows = await client.analytics.load_table("jira_issue", columns=["issue_key", "status"], limit=100)',
+      docs={"table": "Table name (share.schema.table or the short name).", "columns": "Only these columns.", "limit": "Maximum rows.", "as_": '"records" (default), "pandas" or "arrow".'},
+      raises="PolicyDeniedError: ANALYTICS access is not enabled."),
+    M("query", "analytics.table.query", "AnalyticsReader", "query", "sql: str, *, tables: Sequence[str]", "list[dict[str, Any]]",
+      "Run ONE read-only SQL SELECT over the named Data Lake tables.", "Aggregations and joins, e.g. cycle time per project.",
+      'rows = await client.analytics.query("SELECT status, COUNT(*) n FROM jira_issue GROUP BY status", tables=["jira_issue"])',
+      docs={"sql": "A single SELECT (or WITH ... SELECT). No DDL, files or extensions.", "tables": "The tables the SQL reads (loaded into an isolated engine)."},
+      raises="InvalidRequestError: The SQL is not a single read-only SELECT."),
+])
+cls("ExportsClient", "Native and synthesized exports: Jira CSV, Confluence pages and spaces.", "exports", [
+    M("jira_csv", "export.jira.csv", "JiraExporter", "export_issues_csv", "jql: str, *, fields: Sequence[str] | None = None, dest: Path", "Path",
+      "Export the issues of a JQL query as CSV (synthesized from search, or the product's native CSV export).", "A spreadsheet or a file hand-off is needed.",
+      'path = await client.exports.jira_csv("project = PROJ", dest=Path("issues.csv"))',
+      docs={"dest": "File path to write the CSV to.", "fields": "Columns to include (default: key, summary, status, ...)."}),
+    M("confluence_content", "export.confluence.page", "ConfluenceExporter", "export_content", 'content_id: str, *, format: Literal["pdf", "word", "html", "markdown"], dest: Path', "Path",
+      "Export one Confluence page as pdf, word, html or markdown.", "A document hand-off is needed (pdf / word need MCP or the browser backend).",
+      'path = await client.exports.confluence_content("123", format="html", dest=Path("page.html"))',
+      docs={"dest": "File path to write the export to.", "format": '"pdf", "word", "html" or "markdown" (which ones depend on the backend).'}),
+    M("confluence_space", "export.confluence.space", "ConfluenceExporter", "export_space", 'space_key: str, *, format: Literal["pdf", "html", "xml", "csv"], dest: Path', "Path",
+      "Export a whole Confluence space (native export through the browser backend, or an HTML / CSV synthesis).", "A whole-space archive or an index of pages is needed.",
+      'path = await client.exports.confluence_space("ENG", format="html", dest=Path("eng.html"))',
+      docs={"dest": "File path to write the export to.", "format": '"pdf", "html", "xml" or "csv" (which ones depend on the backend).'}),
+])
 cls("RawClient", "Raw access to any REST endpoint with auth, retry and pagination applied.", "raw", [
     M("request", "raw.request", "RawRequester", "request",
       'method: str, path: str, *, product: Literal["jira", "confluence", "jsm", "agile", "admin"], params: Mapping[str, Any] | None = None, '
@@ -580,8 +613,11 @@ extend("ConfluenceSpacesClient", [
       docs={"instructions": "Instruction text."}),
 ])
 extend("GraphClient", [
-    M("add_context", "graph.context.add", "TeamworkGraphWriter", "add_context", "ari_or_url: str, context: Mapping[str, Any]", "None", "Attach context to a graph entity (MCP only).",
-      "Recording relationships for later retrieval.", 'r = await client.graph.add_context("ari:cloud:jira::issue/10001", {"note": "x"}, dry_run=True)', docs={"context": "Context key/values."}),
+    M("add_relationship", "graph.context.add", "TeamworkGraphWriter", "add_relationship", "ari_or_url: str, relationship_type: str, target: str, *, title: str | None = None",
+      "None", "Add one typed Teamwork Graph relationship (MCP only).", "Linking a work item to another work item, a project or a goal.",
+      'r = await client.graph.add_relationship("PROJ-1", "jira-work-item-links-jira-work-item", "PROJ-2", dry_run=True)',
+      docs={"relationship_type": "e.g. jira-work-item-links-jira-work-item, jira-work-item-blocks-jira-work-item, jira-work-item-tracks-atlassian-project.",
+            "target": "Key, ARI or URL of the target entity.", "title": "Optional display label (remote links)."}),
 ])
 
 
@@ -716,7 +752,7 @@ from ..protocols import (ConfluenceContentReader, ConfluenceSearcher, Confluence
                          JiraIssueReader, JiraIssueSearcher, JiraJqlTools, JiraMetadataReader, JiraProjectReader, JiraUserDirectory,
                          JsmReader, RawRequester, SemanticSearcher, TeamworkGraphReader, JiraIssueWriter, JiraIssueDeleter, JiraProjectWriter,
                          JiraAdmin, JiraAgileWriter, JsmWriter, ConfluenceContentWriter, ConfluenceSpaceWriter, ConfluencePermissionWriter,
-                         ConfluenceContentDeleter, TeamworkGraphWriter, ConfluenceSpecialContent)
+                         ConfluenceContentDeleter, TeamworkGraphWriter, ConfluenceSpecialContent, AnalyticsReader, JiraExporter, ConfluenceExporter)
 from ..protocols.confluence import BodyFormat, ContentType
 from ._namespace import Namespace
 

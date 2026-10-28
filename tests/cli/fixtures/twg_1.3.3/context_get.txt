@@ -1,0 +1,79 @@
+Usage: twg context get [options] <reference>
+
+Resolve one Atlassian work artifact and return bounded direct context [Enriched]
+
+Arguments:
+  reference                Atlassian URL, Jira key, typed ID, or ARI
+
+Options:
+  --type <kind>            Disambiguate a bare numeric ID or assert the resolved
+                           anchor kind (choices: "jira-workitem",
+                           "confluence-page", "confluence-blogpost",
+                           "confluence-whiteboard", "confluence-space",
+                           "atlas-project", "atlas-goal",
+                           "bitbucket-pull-request", "bitbucket-repository",
+                           "user", "team", "focus-area", "loom-video",
+                           "trello-card", "project", "projects",
+                           "atlas_project", "goal", "goals", "atlas_goal")
+  --detail <level>         Response detail: summary counts and targets, or full
+                           objects where adapters support them (choices:
+                           "summary", "full", "compact", "medium", default:
+                           "summary")
+  --since <duration>       Lookback for typed enrichment where supported (e.g.
+                           7d, 2w) (default: "7d")
+  --relationships <names>  Exact comma-separated graph edge names to traverse
+  --types <names>          Comma-separated target graph node types to keep
+  --first <n>              Max results per selected relationship (default: 20,
+                           max: 200)
+  --after <cursor>         Pagination cursor
+  -h, --help               display help for command
+
+Note: Results include only directly-linked entities (explicit graph edges). Conceptually related but unlinked items are not returned.
+
+What this returns:
+  A stable V2 envelope with:
+    anchor            the resolved object
+    groups            direct evidence grouped as relationships, code, docs, people, delivery
+    coverage          what generic graph, typed adapter, and native hydration ran
+    gaps              explicit coverage limits
+    partialFailures   recoverable backend or adapter failures
+
+Resolution:
+  Exact Jira and Atlas keys use the shared resolver; --type disambiguates key collisions.
+  Jira keys and Confluence URLs/IDs use richer typed planners when possible.
+  Canonical ARIs use a generic Teamwork Graph fallback for any resolvable root node.
+  Jira and Confluence add typed enrichment on top of generic graph evidence.
+  Other ARIs return generic graph context plus clear gaps when typed enrichment is unavailable.
+
+Safety:
+  The command never performs fuzzy search, recursive graph traversal, or mutations.
+  Default traversal depth is 1.
+  Automatic graph discovery selects at most 8 relationship types from a bounded direct-edge scan.
+  Each selected relationship is capped before context is returned.
+  Global caps are 120 nodes and 120 edges, including explicitly requested relationships.
+  Jira and Confluence reserve 40 edges for typed enrichment, so generic traversal uses at most 80.
+
+Examples:
+  $ twg context get PROJ-123 -s hello
+  $ twg context get ATLAS-121097 -s hello --type atlas-project
+  $ twg context get https://hello.atlassian.net/browse/PROJ-123
+  $ twg context get https://hello.atlassian.net/wiki/spaces/ENG/pages/12345/Page
+  $ twg context get 12345 --type confluence-page -s hello
+  $ twg context get ari:cloud:townsquare:<cloudId>:project/<id>
+  $ twg context get ari:cloud:identity::team/<teamId> -s hello
+  $ twg context get ari:cloud:jira:<cloudId>:issue/<id> --detail full
+  $ twg context get <ari> --relationships <exact-edge-type>
+  $ twg context get <ari> --types IdentityUser,GraphPullRequest
+
+Guards:
+  Use for: "what is directly connected to this one thing?"
+  Use exact keys, URLs, or ARIs. Use search first when you only have a fuzzy topic.
+  Use --relationships only when you know the exact graph edge name to inspect.
+  Bare numeric IDs require --type because Jira and Confluence IDs can overlap.
+  Bitbucket PR URLs depend on resolver coverage; if resolution fails, use the repair command in the error.
+  Resolvable ARIs without graph coverage return anchor-only context with explicit gaps.
+
+
+Access tier:
+  Enriched: Retrieves bounded cross-product context using graph-backed enrichment.
+

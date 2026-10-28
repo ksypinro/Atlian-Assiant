@@ -1,6 +1,6 @@
-from atlassian_client import operations as ops
-from atlassian_client.backends.rest_cloud import SUPPORTED
-from atlassian_client.capabilities import Access, Product
+from atlian_assiant import operations as ops
+from atlian_assiant.backends.rest_cloud import SUPPORTED
+from atlian_assiant.capabilities import Access, Product
 
 
 def test_catalog_ids_are_unique_dotted_and_consistent():
@@ -30,7 +30,7 @@ def test_access_classes_and_flags():
 
 
 def test_rest_supported_operations_are_all_in_the_catalog():
-    from atlassian_client.backends.rest_cloud import READ_SUPPORTED, WRITE_SUPPORTED
+    from atlian_assiant.backends.rest_cloud import READ_SUPPORTED, WRITE_SUPPORTED
 
     assert SUPPORTED <= set(ops.CATALOG), sorted(SUPPORTED - set(ops.CATALOG))
     assert all(ops.CATALOG[o].access in (Access.READ, Access.SEARCH) for o in READ_SUPPORTED)
