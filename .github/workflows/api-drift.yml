@@ -11,8 +11,8 @@ jobs:
   drift:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
       - run: pip install -e ".[dev]"
@@ -23,7 +23,7 @@ jobs:
           python -m tools.codegen --diff /tmp/old_index.json > /tmp/drift.json || true
       - name: Reachability must stay at 100%
         run: python -m tools.codegen --check-reachability
-      - uses: peter-evans/create-pull-request@v6
+      - uses: peter-evans/create-pull-request@v8
         with:
           branch: api-drift/nightly
           title: "API drift: regenerate the OpenAPI operation index"

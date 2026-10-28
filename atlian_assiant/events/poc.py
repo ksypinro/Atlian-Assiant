@@ -329,6 +329,12 @@ def _parse_duration(text: str | None) -> timedelta | None:
     return timedelta(seconds=float(text.rstrip("smh")) * unit)
 
 
+def _blueprint_name(value: str) -> str:
+    if value not in {b.value for b in Blueprint}:
+        raise argparse.ArgumentTypeError(f"invalid blueprint {value!r} (choose from {', '.join(b.value for b in Blueprint)})")
+    return value
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="atlian_assiant.events.poc", description="Reproduce the EV section 61 proofs of concept")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -339,7 +345,9 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--forced-failures", type=int, default=0)
     run.add_argument("--offline", action="store_true", help="use the deterministic simulation (the only mode without sandbox credentials)")
     cmp_ = sub.add_parser("compare", help="compare blueprints")
-    cmp_.add_argument("blueprints", nargs="*", choices=[b.value for b in Blueprint], help="default: forge_inbox zero_app_polling")
+    # validated by ``type`` rather than ``choices``: Python 3.11 rejects an EMPTY ``nargs="*"`` list against ``choices`` (fixed in 3.12)
+    cmp_.add_argument("blueprints", nargs="*", type=_blueprint_name, metavar="BLUEPRINT",
+                      help="one or more of: " + ", ".join(b.value for b in Blueprint) + " (default: forge_inbox zero_app_polling)")
     cmp_.add_argument("--trials", type=int, default=30)
     cmp_.add_argument("--offline", action="store_true")
     scen = sub.add_parser("scenario", help="run PoC A, B, C or D")
